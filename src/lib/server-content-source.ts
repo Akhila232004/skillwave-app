@@ -1,13 +1,15 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+
 import {
-  CONTENT_REPO_BASE_PATH,
   CONTENT_REPO_BRANCH,
   CONTENT_REPO_OWNER,
-  buildContentRepoRawUrl,
+  CONTENT_REPO_NAME,
   getContentRepoDisplayName,
-  getContentRepoPathCandidates,
-  getContentRepoNameCandidates,
+  normalizeContentRepoPath,
   resolveContentRepoPath,
 } from "./content-repo-config";
+
 import type { ContentRepoStatus } from "./content-types";
 
 export type RepoContentSource = {
@@ -23,49 +25,91 @@ export type RepoDirectoryEntry = {
   downloadUrl?: string;
 };
 
-export async function readRepoContentSource(
-  repoFilePath: string,
-  preferredRepoName?: string,
-  repoRef = CONTENT_REPO_BRANCH
-): Promise<RepoContentSource> {
-  const pathCandidates = getContentRepoPathCandidates(repoFilePath);
-  const repoNameCandidates = getContentRepoNameCandidates(preferredRepoName);
-  let lastStatus: number | null = null;
+/*
+ * The application and its content now live in the same repository.
+ *
+ * Example:
+ *
+ *   courses/vue-js/README.md
+ *
+ * resolves to:
+ *
+ *   <project-root>/courses/vue-js/README.md
+ *
+ * We intentionally keep the existing function names so the rest of
+ * server-content.ts does not need to be rewritten.
+ */
 
-  for (const repoName of repoNameCandidates) {
-    for (const pathCandidate of pathCandidates) {
-      const remoteUrl = buildContentRepoRawUrl(pathCandidate, repoName, repoRef);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
+const CONTENT_ROOT = process.cwd();
 
-      let response: Response;
-      try {
-        response = await fetch(remoteUrl, {
-          cache: "no-store",
-          headers: {
-            "User-Agent": "Tinitiate-Edu-App",
-          },
-          signal: controller.signal,
-        });
-      } finally {
-        clearTimeout(timeout);
-      }
+const normalizeLocalPath = (filePath: string) =>
+  normalizeContentRepoPath(
+    String(filePath || "")
+      .replace(/^https?:\/\/[^/]+\/?/i, "")
+      .replace(/^\/+/, "")
+  );
 
-      if (response.ok) {
-        return {
-          repoName,
-          text: await response.text(),
-          url: remoteUrl,
-        };
-      }
+const getLocalContentPath = (filePath: string) => {
+  const normalized = normalizeLocalPath(filePath);
 
-      lastStatus = response.status;
-    }
+  if (!normalized) {
+    throw new Error("Content file path is empty");
   }
 
-  throw new Error(
-    `Failed to fetch ${repoFilePath} from GitHub${lastStatus ? ` (${lastStatus})` : ""}`
-  );
+  /*
+   * Prevent paths such as:
+   *
+   *   ../../some-file
+   *
+   * from escaping the application repository.
+   */
+  const root = path.resolve(CONTENT_ROOT);
+  const target = path.resolve(root, normalized);
+
+  if (target !== root && !target.startsWith(`${root}${path.sep}`)) {
+    throw new Error(`Invalid content path: ${filePath}`);
+  }
+
+  return target;
+};
+
+const buildLocalContentUrl = (filePath: string) => {
+  const normalized = normalizeLocalPath(filePath);
+
+  /*
+   * This is retained as a stable identifier for existing code.
+   *
+   * It is NOT a remote GitHub URL anymore.
+   */
+  return `local-content://${normalized}`;
+};
+
+const getLocalDirectoryPath = (folderPath: string) =>
+  getLocalContentPath(folderPath);
+
+export async function readRepoContentSource(
+  repoFilePath: string,
+  _preferredRepoName?: string,
+  _repoRef = CONTENT_REPO_BRANCH
+): Promise<RepoContentSource> {
+  const filePath = getLocalContentPath(repoFilePath);
+
+  try {
+    const text = await fs.readFile(filePath, "utf8");
+
+    return {
+      repoName: `${CONTENT_REPO_OWNER}/${CONTENT_REPO_NAME}`,
+      text,
+      url: buildLocalContentUrl(repoFilePath),
+    };
+  } catch (error) {
+    const reason =
+      error instanceof Error ? error.message : String(error);
+
+    throw new Error(
+      `Failed to read local content ${repoFilePath}: ${reason}`
+    );
+  }
 }
 
 export async function readRepoContentText(
@@ -73,164 +117,113 @@ export async function readRepoContentText(
   preferredRepoName?: string,
   repoRef = CONTENT_REPO_BRANCH
 ) {
-  const source = await readRepoContentSource(repoFilePath, preferredRepoName, repoRef);
+  const source = await readRepoContentSource(
+    repoFilePath,
+    preferredRepoName,
+    repoRef
+  );
+
   return source.text;
 }
 
 export async function readRepoDirectory(
   repoFolderPath: string,
-  preferredRepoName?: string,
-  repoRef = CONTENT_REPO_BRANCH
-): Promise<{ repoName: string; entries: RepoDirectoryEntry[] }> {
-  const pathCandidates = getContentRepoPathCandidates(repoFolderPath);
-  const repoNameCandidates = getContentRepoNameCandidates(preferredRepoName);
-  let lastStatus: number | null = null;
+  _preferredRepoName?: string,
+  _repoRef = CONTENT_REPO_BRANCH
+): Promise<{
+  repoName: string;
+  entries: RepoDirectoryEntry[];
+}> {
+  const directoryPath = getLocalDirectoryPath(repoFolderPath);
 
-  for (const repoName of repoNameCandidates) {
-    for (const pathCandidate of pathCandidates) {
-      const resolvedPath = resolveContentRepoPath(pathCandidate)
-        .split("/")
-        .filter(Boolean)
-        .map(encodeURIComponent)
-        .join("/");
-      const apiUrl = `https://api.github.com/repos/${CONTENT_REPO_OWNER}/${repoName}/contents/${resolvedPath}?ref=${encodeURIComponent(repoRef)}`;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
+  let entries;
 
-      let response: Response;
-      try {
-        response = await fetch(apiUrl, {
-          cache: "no-store",
-          headers: {
-            Accept: "application/vnd.github+json",
-            "User-Agent": "Tinitiate-Edu-App",
-          },
-          signal: controller.signal,
-        });
-      } finally {
-        clearTimeout(timeout);
-      }
+  try {
+    entries = await fs.readdir(directoryPath, {
+      withFileTypes: true,
+    });
+  } catch (error) {
+    const reason =
+      error instanceof Error ? error.message : String(error);
 
-      if (response.ok) {
-        const payload = await response.json();
-        if (!Array.isArray(payload)) {
-          throw new Error(`${repoFolderPath} is not a GitHub directory`);
-        }
-
-        return {
-          repoName,
-          entries: payload
-            .filter((entry): entry is { name: string; path: string; type: string; download_url?: string } =>
-              Boolean(entry?.name && entry?.path && entry?.type)
-            )
-            .map((entry) => ({
-              name: entry.name,
-              path: entry.path,
-              type: entry.type === "dir" ? "dir" : "file",
-              ...(entry.download_url ? { downloadUrl: entry.download_url } : {}),
-            })),
-        };
-      }
-
-      lastStatus = response.status;
-    }
+    throw new Error(
+      `Failed to read local content directory ${repoFolderPath}: ${reason}`
+    );
   }
 
-  throw new Error(
-    `Failed to list ${repoFolderPath} from GitHub${lastStatus ? ` (${lastStatus})` : ""}`
-  );
+  const normalizedFolder = normalizeLocalPath(repoFolderPath);
+
+  return {
+    repoName: `${CONTENT_REPO_OWNER}/${CONTENT_REPO_NAME}`,
+
+    entries: entries
+      .filter((entry) => entry.name !== ".DS_Store")
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((entry) => {
+        const relativePath = normalizedFolder
+          ? `${normalizedFolder}/${entry.name}`
+          : entry.name;
+
+        return {
+          name: entry.name,
+          path: relativePath,
+          type: entry.isDirectory() ? "dir" : "file",
+          downloadUrl: buildLocalContentUrl(relativePath),
+        };
+      }),
+  };
 }
 
 export async function readContentRepoStatus(): Promise<ContentRepoStatus> {
-  const [repoName] = getContentRepoNameCandidates();
-
-  if (!repoName) {
-    throw new Error("Content repo name is not configured");
-  }
-
-  const params = new URLSearchParams({
-    sha: CONTENT_REPO_BRANCH,
-    per_page: "1",
-  });
-
-  if (CONTENT_REPO_BASE_PATH) {
-    params.set("path", CONTENT_REPO_BASE_PATH);
-  }
-
-  const statusUrl = `https://api.github.com/repos/${CONTENT_REPO_OWNER}/${repoName}/commits?${params.toString()}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-
-  let response: Response;
-  try {
-    response = await fetch(statusUrl, {
-      cache: "no-store",
-      headers: {
-        Accept: "application/vnd.github+json",
-        "User-Agent": "Tinitiate-Edu-App",
-      },
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch content repo status (${response.status})`);
-  }
-
-  const commits = (await response.json()) as Array<{
-    sha?: string;
-    commit?: {
-      author?: { date?: string | null };
-      committer?: { date?: string | null };
-    };
-  }>;
-
-  const latestCommit = commits[0];
-  const updatedAt =
-    latestCommit?.commit?.committer?.date || latestCommit?.commit?.author?.date || null;
-
+  /*
+   * There is no separate content repository anymore.
+   *
+   * We report the local repository as the content source.
+   */
   return {
-    repoName,
+    repoName: `${CONTENT_REPO_OWNER}/${CONTENT_REPO_NAME}`,
     branch: CONTENT_REPO_BRANCH,
     source: getContentRepoDisplayName(),
-    updatedAt,
-    commitSha: latestCommit?.sha || null,
+    updatedAt: null,
+    commitSha: null,
   };
 }
 
 export async function checkContentRepoReachability() {
-  const [repoName] = getContentRepoNameCandidates();
+  /*
+   * Content is local, so reachability means that the expected
+   * content directories/files exist.
+   */
+  const requiredPaths = [
+    "courses",
+    "interview-qna",
+    "cbt",
+    "news-ticker",
+    "dashboard",
+    "design",
+  ];
 
-  if (!repoName) {
+  try {
+    for (const requiredPath of requiredPaths) {
+      const fullPath = getLocalContentPath(requiredPath);
+      const stat = await fs.stat(fullPath);
+
+      if (!stat.isDirectory()) {
+        return false;
+      }
+    }
+
+    return true;
+  } catch {
     return false;
   }
-
-  // Use raw content instead of the GitHub commits API so browser status is not
-  // treated as offline just because the unauthenticated API rate limit is hit.
-  for (const filePath of ["design/colour.yaml", "news-ticker/feed.yaml"]) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    try {
-      const response = await fetch(buildContentRepoRawUrl(filePath, repoName), {
-        cache: "no-store",
-        headers: {
-          "User-Agent": "Tinitiate-Edu-App",
-        },
-        signal: controller.signal,
-      });
-
-      if (response.ok) {
-        return true;
-      }
-    } catch {
-      // try the next lightweight content file before reporting offline
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-
-  return false;
 }
+
+/*
+ * Exported only for future local-content consumers.
+ *
+ * Keeping this helper here makes it easy to resolve the same paths
+ * elsewhere without duplicating filesystem/path-safety logic.
+ */
+export const resolveLocalContentPath = (filePath: string) =>
+  getLocalContentPath(resolveContentRepoPath(filePath));

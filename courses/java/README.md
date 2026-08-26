@@ -1,15 +1,13 @@
-﻿> Imported source for the Tinitiate education content repository.
-> Original repository: https://github.com/tinitiateprime/java-fullstack
 ## CONTENTS
 
-* ### [Java Basics](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/java-basics/java_basics.md)
-    * ### [Install JDK & Hello World](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/install-jdk-hello-world/install_jdk_hello_world.md)
+* ### [Java Basics](./core-java/java-basics/java_basics.md)
+    * ### [Install JDK & Hello World](./core-java/install-jdk-hello-world/install_jdk_hello_world.md)
         * Install JDK (Windows, Linux, macOS)
         * Set JAVA_HOME and PATH
         * Writing the first program
         * Compiling and Running (`javac`, `java`)
         * Understanding `main()` method
-    * ### [Variables](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/variables/variables.md)
+    * ### [Variables](./core-java/variables/variables.md)
         * Variable Declaration and Initialization
             * Syntax
             * Multiple Declarations
@@ -24,7 +22,7 @@
             * Scope (block, method, class, global)
         * Naming Rules
           
-    * ### [Data Types](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/data-types/data_types.md)
+    * ### [Data Types](./core-java/data-types/data_types.md)
         * Primitive Data Types
             * byte
             * short
@@ -40,11 +38,11 @@
             * Classes
             * Interfaces
         * Null and Default Values
-    * ### [Type Casting](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/type-casting/type-casting.md)
+    * ### [Type Casting](./core-java/type-casting/type-casting.md)
         * Implicit (widening)
         * Explicit (narrowing)
 
-    * ### [Operators & Expressions](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/operators-expressions/operators_expressions.md)
+    * ### [Operators & Expressions](./core-java/operators-expressions/operators_expressions.md)
         * Arithmetic Operators
         * Relational (Comparison) Operators
         * Logical Operators
@@ -52,7 +50,7 @@
         * Unary Operators
         * Ternary Operator
         * Precedence and Associativity
-    * ### [Control Flow](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/control-flow/control_flow.md)
+    * ### [Control Flow](./core-java/control-flow/control_flow.md)
         * Conditional Statements
             * if, if-else, nested if
             * switch-case
@@ -64,7 +62,7 @@
             * break
             * continue
             * return
-    * ### [Arrays](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/arrays/arrays.md)
+    * ### [Arrays](./core-java/arrays/arrays.md)
         * Introduction to Arrays
         * Declaring & Initializing Arrays
             * Arrays of Various Data Types
@@ -78,7 +76,7 @@
             * Arrays.equals
             * Arrays.copyOf
         * Limitations of Arrays
-    * ### [Strings](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/strings/strings.md)
+    * ### [Strings](./core-java/strings/strings.md)
         * Introduction to Strings
         * Declaring & Initializing Strings
         * String Immutability
@@ -113,10 +111,10 @@
         * Limitations of Strings
             * Immutability overhead
             * Prefer StringBuilder for modifications
-    * ### [Wrapper Classes](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/wrapper-classes/wrapper_classes.md)
+    * ### [Wrapper Classes](./core-java/wrapper-classes/wrapper_classes.md)
         * Autoboxing
         * Unboxing
-    * ### [Classes & Objects](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/classes-objects/classes_objects.md)
+    * ### [Classes & Objects](./core-java/classes-objects/classes_objects.md)
         * Defining a Class
         * Creating Objects
         * Methods
@@ -129,15 +127,15 @@
         * `this` keyword
         * Pass-by-Value (Java Parameter Passing)
 
-* ### [Object Oriented Programming Concepts](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/java-object-oriented-programming/java-object-oriented-programming.md)
-    * ### [Encapsulation](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/java-object-oriented-programming/encapsulation/encapsulation.md)
+* ### [Object Oriented Programming Concepts](./core-java/java-object-oriented-programming/java-object-oriented-programming.md)
+    * ### [Encapsulation](./core-java/java-object-oriented-programming/encapsulation/encapsulation.md)
         * Definition & Importance
         * Data Hiding
         * Getters & Setters
         * Access Modifiers and Encapsulation
         * Real-world Example (Bank Account, Student Class)
         * Best Practices
-    * ### [Inheritance](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/java-object-oriented-programming/inheritance/inheritance.md)
+    * ### [Inheritance](./core-java/java-object-oriented-programming/inheritance/inheritance.md)
         * Definition & Use Cases
         * Types of Inheritance
             * Single Inheritance
@@ -149,14 +147,14 @@
         * Method Overriding
         * Constructor Chaining
         * Limitations of Inheritance
-    * ### [Polymorphism](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/java-object-oriented-programming/polymorphism/polymorphism.md)
+    * ### [Polymorphism](./core-java/java-object-oriented-programming/polymorphism/polymorphism.md)
         * Definition & Types
             * Compile-time Polymorphism (Method Overloading)
             * Runtime Polymorphism (Method Overriding)
         * Rules for Overloading & Overriding
         * Dynamic Method Dispatch
         * `instanceof` Operator
-    * ### [Abstraction](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/java-object-oriented-programming/abstraction/abstraction.md)
+    * ### [Abstraction](./core-java/java-object-oriented-programming/abstraction/abstraction.md)
         * Definition & Importance
         * Abstract Classes
             * Abstract Methods
@@ -167,7 +165,7 @@
             * Functional Interfaces
         * Difference Between Abstract Classes & Interfaces
 
-    * ### [Exception Handling](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/exception-handling/exception-handling.md)
+    * ### [Exception Handling](./core-java/exception-handling/exception-handling.md)
         * Introduction to Exceptions
             * What is an Exception?
             * Exception Hierarchy (Throwable → Exception / Error)
@@ -185,7 +183,7 @@
         * Custom Exceptions
         <!-- * Best Practices for Exception Handling -->
 
-    * ### [Collections Framework](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/collections-framework/collections_framework.md)
+    * ### [Collections Framework](./core-java/collections-framework/collections_framework.md)
         * Introduction to Collections
             * Arrays vs Collections
             * Collection Hierarchy
@@ -204,7 +202,7 @@
             * Arrays
 
 
-    * ### [Generics](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/generics/generics.md)
+    * ### [Generics](./core-java/generics/generics.md)
         * Introduction to Generics
         * Generic Classes
         * Generic Methods
@@ -218,7 +216,7 @@
         * Generics with Collections
         * Advantages & Limitations of Generics
 
-    * ### [Multithreading & Concurrency](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/multithreading-concurrency/multithreading_concurrency.md)
+    * ### [Multithreading & Concurrency](./core-java/multithreading-concurrency/multithreading_concurrency.md)
         * Introduction to Multithreading
             * Process vs Thread
             * Thread Lifecycle
@@ -240,7 +238,7 @@
             * Concurrent Collections
     
 
-    * ### [Java I/O & Streams](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/java-io-streams/java_io_streams.md)
+    * ### [Java I/O & Streams](./core-java/java-io-streams/java_io_streams.md)
         * Java I/O Basics
             * Byte Streams vs Character Streams
             * InputStream & OutputStream
@@ -257,7 +255,7 @@
             * Paths & Files class
         <!-- * Best Practices -->
 
-    * ### [Java 8+ Features](https://github.com/tinitiateprime/java-fullstack/blob/main/core-java/java8-features/java8_features.md)
+    * ### [Java 8+ Features](./core-java/java8-features/java8_features.md)
         * Lambda Expressions
             * Syntax & Usage
             * Functional Programming basics
@@ -276,7 +274,7 @@
             * LocalDate, LocalTime, LocalDateTime
             * ZonedDateTime, Instant
             * DateTimeFormatter
-* ### [Java Common Libraries](https://github.com/tinitiateprime/java-fullstack/blob/main/java-common-libraries/java_common_libraries.md)
+* ### [Java Common Libraries](./java-common-libraries/java_common_libraries.md)
     * JavaMail (Email API)
         * What is JavaMail?
         * SMTP basics (host, port, username, password)
@@ -296,9 +294,9 @@
         * Common assertions (assertEquals, assertThrows, etc.)
         * Running tests from IDE / Maven
 
-* ### [Spring Framework](https://github.com/tinitiateprime/java-fullstack/blob/main/spring-framework/spring_framework.md)
+* ### [Spring Framework](./spring-framework/spring_framework.md)
 
-    * ### [Spring Core](https://github.com/tinitiateprime/java-fullstack/blob/main/spring-framework/spring-core/spring_core.md)
+    * ### [Spring Core](./spring-framework/spring-core/spring_core.md)
         * Introduction to Spring
             * What is Spring Framework?
             * Features of Spring
@@ -327,7 +325,7 @@
             * init() and destroy() methods
             * @PostConstruct and @PreDestroy
 
-    * ### [Spring MVC](https://github.com/tinitiateprime/java-fullstack/blob/main/spring-framework/spring-mvc/spring_mvc.md)
+    * ### [Spring MVC](./spring-framework/spring-mvc/spring_mvc.md)
         * Introduction to Spring MVC
             * MVC Design Pattern (Model-View-Controller)
             * Advantages of Spring MVC
@@ -356,9 +354,9 @@
             * Thymeleaf
             * FreeMarker
 
-* ### [Spring Boot](https://github.com/tinitiateprime/java-fullstack/blob/main/spring-boot/spring_boot.md)
+* ### [Spring Boot](./spring-boot/spring_boot.md)
 
-    * ### [Introduction](https://github.com/tinitiateprime/java-fullstack/blob/main//spring-boot/introduction.md)
+    * ### [Introduction](/spring-boot/introduction.md)
   
         * Introduction to Spring Boot
         * Difference between Spring & Spring Boot
@@ -374,14 +372,14 @@
     * Dependencies
         * Spring Boot Starters
     
-    * ### [Auto Configuration](https://github.com/tinitiateprime/java-fullstack/blob/main/spring-boot/auto-configuration/auto_configuration.md)
+    * ### [Auto Configuration](./spring-boot/auto-configuration/auto_configuration.md)
       * Auto Configuration Explained
         * @SpringBootApplication
         * @EnableAutoConfiguration
     
 
 
-    * ### [Profiles & Configuration Management](https://github.com/tinitiateprime/java-fullstack/blob/main/spring-boot/profiles_configuration/profiles_configuration.md)
+    * ### [Profiles & Configuration Management](./spring-boot/profiles_configuration/profiles_configuration.md)
     * Profiles in Spring Boot
         * @Profile Annotation
         * application-{profile}.yml
@@ -398,7 +396,7 @@
         * Using .env files
         * Integration with Vault, AWS Secrets Manager
 
-    * ### [REST API Development](https://github.com/tinitiateprime/java-fullstack/blob/main/spring-boot/rest-api/rest_api.md)
+    * ### [REST API Development](./spring-boot/rest-api/rest_api.md)
         * Introduction to REST Architecture
         * Creating REST Controllers
             * @RestController
@@ -419,7 +417,7 @@
         * Pagination & Sorting
         * File Upload & Download APIs
 
-    * ### [Spring Security](https://github.com/tinitiateprime/java-fullstack/blob/main/spring-boot/spring-security/spring_security.md)
+    * ### [Spring Security](./spring-boot/spring-security/spring_security.md)
         * Introduction to Security in Spring Boot
         * Authentication vs Authorization
         * Spring Security Basics
@@ -438,7 +436,7 @@
         * Method-Level Security
             * @PreAuthorize, @PostAuthorize
 
-    * ### [API Documentation](https://github.com/tinitiateprime/java-fullstack/blob/main/spring-boot/api-documentation/api_documentation.md)
+    * ### [API Documentation](./spring-boot/api-documentation/api_documentation.md)
         * Introduction to API Documentation
         * Swagger (Springfox)
             * Adding Swagger to Spring Boot
@@ -449,7 +447,7 @@
         * Best Practices for API Documentation
         * Generating API Docs Automatically
 
-    * ### [Testing](https://github.com/tinitiateprime/java-fullstack/blob/main/spring-boot/testing/testing.md)
+    * ### [Testing](./spring-boot/testing/testing.md)
         * Unit Testing
             * JUnit 5 Basics
             * Assertions
@@ -466,9 +464,9 @@
         * TestContainers
             * Running DBs in Docker for Testing
 
-* ### [Microservices](https://github.com/tinitiateprime/java-fullstack/blob/main/microservices/microservices.md)
+* ### [Microservices](./microservices/microservices.md)
 
-    * ### [Introduction to Microservices](https://github.com/tinitiateprime/java-fullstack/blob/main/microservices/introduction/introduction_microservices.md)
+    * ### [Introduction to Microservices](./microservices/introduction/introduction_microservices.md)
         * What are Microservices?
         * Monolith vs Microservices
         * Advantages of Microservices
@@ -479,14 +477,14 @@
             * High Cohesion
         * Real-world Examples of Microservices
 
-    * ### [Service Boundaries](https://github.com/tinitiateprime/java-fullstack/blob/main/microservices/service-boundaries/service_boundaries.md)
+    * ### [Service Boundaries](./microservices/service-boundaries/service_boundaries.md)
         * Identifying Service Boundaries
         * Business Capability-driven Design
         * Bounded Context (Domain-Driven Design)
         * Avoiding Over-Granularity
         * Example: E-commerce (Order Service, Payment Service, Inventory Service)
 
-    * ### [Communication (REST, Messaging)](https://github.com/tinitiateprime/java-fullstack/blob/main/microservices/communication/communication.md)
+    * ### [Communication (REST, Messaging)](./microservices/communication/communication.md)
         * Synchronous Communication
             * REST APIs
             * gRPC Basics
@@ -497,7 +495,7 @@
         * When to Choose REST vs Messaging
         * Handling Communication Failures
 
-    * ### [Service Discovery](https://github.com/tinitiateprime/java-fullstack/blob/main/microservices/service-discovery/service_discovery.md)
+    * ### [Service Discovery](./microservices/service-discovery/service_discovery.md)
         * What is Service Discovery?
         * Client-Side Discovery vs Server-Side Discovery
         * Netflix Eureka
@@ -510,7 +508,7 @@
         * DNS-based Service Discovery (Kubernetes)
         * Best Practices
 
-    * ### [API Gateway](https://github.com/tinitiateprime/java-fullstack/blob/main/microservices/api-gateway/api_gateway.md)
+    * ### [API Gateway](./microservices/api-gateway/api_gateway.md)
         * What is an API Gateway?
         * Role in Microservices Architecture
         * Spring Cloud Gateway
@@ -523,7 +521,7 @@
             * Rate Limiting
             * Logging & Monitoring
 
-    * ### [Centralized Config](https://github.com/tinitiateprime/java-fullstack/blob/main/microservices/centralized-config/centralized_config.md)
+    * ### [Centralized Config](./microservices/centralized-config/centralized_config.md)
         * The Need for Centralized Config
         * Spring Cloud Config
             * Config Server
@@ -533,7 +531,7 @@
         * Security of Configurations
         * Alternatives (Consul KV, Vault, AWS Parameter Store)
 
-    * ### [Resilience](https://github.com/tinitiateprime/java-fullstack/blob/main/microservices/resilience/resilience.md)
+    * ### [Resilience](./microservices/resilience/resilience.md)
         * Introduction to Resilience
         * Failures in Distributed Systems
         * Resilience Patterns
@@ -550,9 +548,9 @@
         <!-- * Chaos Engineering Basics -->
 
 
-* ### [Database & Persistence](https://github.com/tinitiateprime/java-fullstack/blob/main/database/database_persistence.md)
+* ### [Database & Persistence](./database/database_persistence.md)
 
-    * ### [SQL & Databases](https://github.com/tinitiateprime/java-fullstack/blob/main/database/sql-databases/sql_databases.md)
+    * ### [SQL & Databases](./database/sql-databases/sql_databases.md)
         * Introduction to Databases
             * What is a Database?
             * RDBMS vs NoSQL
@@ -588,7 +586,7 @@
             * Query Optimization Basics
             * ER Diagrams
 
-    * ### [ORM with Hibernate/JPA](https://github.com/tinitiateprime/java-fullstack/blob/main/database/hibernate-jpa/hibernate_jpa.md)
+    * ### [ORM with Hibernate/JPA](./database/hibernate-jpa/hibernate_jpa.md)
         * Introduction to ORM
             * What is ORM?
             * Advantages & Disadvantages
@@ -620,9 +618,9 @@
 
 
 * ### Front-End Development
- * ### [HTML & CSS](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/html-css/html_css.md)
+ * ### [HTML & CSS](./frontend/html-css/html_css.md)
 
-    * ### [HTML5 Basics](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/html-css/html5-basics/html5_basics.md)
+    * ### [HTML5 Basics](./frontend/html-css/html5-basics/html5_basics.md)
         * Introduction to HTML
             * What is HTML?
             * Structure of an HTML Document
@@ -641,7 +639,7 @@
             * Labels & Fieldsets
             * Form Validation (required, pattern)
 
-    * ### [Forms & Semantic Tags](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/html-css/forms-semantic/forms_semantic.md)
+    * ### [Forms & Semantic Tags](./frontend/html-css/forms-semantic/forms_semantic.md)
         * HTML Forms Deep Dive
             * action, method, enctype
             * GET vs POST
@@ -654,7 +652,7 @@
             * Common Semantic Tags (main, figure, figcaption, mark, time)
         * Best Practices for Semantic HTML
 
-    * ### [CSS3 Basics](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/html-css/css3-basics/css3_basics.md)
+    * ### [CSS3 Basics](./frontend/html-css/css3-basics/css3_basics.md)
         * Introduction to CSS
             * Inline, Internal, External CSS
             * Selectors (element, class, id, attribute, pseudo-classes)
@@ -669,7 +667,7 @@
         * Units
             * px, %, em, rem, vw, vh
 
-    * ### [Responsive Design (Flexbox & Grid)](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/html-css/responsive-design/responsive_design.md)
+    * ### [Responsive Design (Flexbox & Grid)](./frontend/html-css/responsive-design/responsive_design.md)
         * Introduction to Responsive Design
             * Media Queries
             * Mobile-first vs Desktop-first
@@ -685,9 +683,9 @@
         * Responsive Images & Viewport
         * Best Practices for Responsive Web Design
 
-* ### [JavaScript & ES6+](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/javascript-es6/javascript_es6.md)
+* ### [JavaScript & ES6+](./frontend/javascript-es6/javascript_es6.md)
 
-    * ### [Variables, Functions & Scope](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/javascript-es6/variables-functions-scope/variables_functions_scope.md)
+    * ### [Variables, Functions & Scope](./frontend/javascript-es6/variables-functions-scope/variables_functions_scope.md)
         * Introduction to JavaScript
             * Dynamic Typing
             * Interpreted Language
@@ -710,7 +708,7 @@
             * Block Scope
             * Lexical Scope & Closures
 
-    * ### [DOM Manipulation](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/javascript-es6/dom-manipulation/dom_manipulation.md)
+    * ### [DOM Manipulation](./frontend/javascript-es6/dom-manipulation/dom_manipulation.md)
         * The Document Object Model (DOM)
         * Selecting Elements
             * getElementById, getElementsByClassName, getElementsByTagName
@@ -727,7 +725,7 @@
         * Traversing the DOM
             * parentNode, childNodes, nextSibling, previousSibling
 
-    * ### [Events & Fetch API](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/javascript-es6/events-fetch-api/events_fetch_api.md)
+    * ### [Events & Fetch API](./frontend/javascript-es6/events-fetch-api/events_fetch_api.md)
         * JavaScript Events
             * Inline Events vs addEventListener
             * Mouse Events (click, dblclick, mouseover, mouseout)
@@ -743,7 +741,7 @@
             * Error Handling with fetch()
         * Comparing Fetch with XMLHttpRequest (XHR)
 
-    * ### [Promises & Async/Await](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/javascript-es6/promises-async-await/promises_async_await.md)
+    * ### [Promises & Async/Await](./frontend/javascript-es6/promises-async-await/promises_async_await.md)
         * Introduction to Asynchronous JavaScript
             * The Event Loop & Callbacks
         * Promises
@@ -760,9 +758,9 @@
             * API Calls
             * Sequential vs Parallel Execution
 
-* ### [React.js](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/react/react.md)
+* ### [React.js](./frontend/react/react.md)
 
-    * ### [Components & JSX](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/react/components-jsx/components_jsx.md)
+    * ### [Components & JSX](./frontend/react/components-jsx/components_jsx.md)
         * Introduction to React
             * What is React?
             * SPA (Single Page Applications) Concept
@@ -783,7 +781,7 @@
             * Ternary Operator
             * Short-circuit `&&`
 
-    * ### [State & Props](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/react/state-props/state_props.md)
+    * ### [State & Props](./frontend/react/state-props/state_props.md)
         * Props
             * Passing Data Between Components
             * Default Props
@@ -797,7 +795,7 @@
         * Controlled vs Uncontrolled Components
         * Passing Functions as Props
 
-    * ### [Hooks](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/react/hooks/hooks.md)
+    * ### [Hooks](./frontend/react/hooks/hooks.md)
         * Introduction to Hooks
             * Why Hooks? (Functional Components vs Class Components)
         * useState
@@ -816,7 +814,7 @@
             * Creating & Using Custom Hooks
         * Rules of Hooks
 
-    * ### [Routing](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/react/routing/routing.md)
+    * ### [Routing](./frontend/react/routing/routing.md)
         * Introduction to React Router
         * Setting Up Routes
         * Nested Routes
@@ -825,7 +823,7 @@
         * Protected Routes
         * Lazy Loading Routes
 
-    * ### [State Management](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/react/state-management/state_management.md)
+    * ### [State Management](./frontend/react/state-management/state_management.md)
         * Context API
             * Creating Context
             * Provider & Consumer
@@ -838,7 +836,7 @@
         * Comparison: Context API vs Redux
         * Best Practices
 
-    * ### [UI Libraries](https://github.com/tinitiateprime/java-fullstack/blob/main/frontend/react/ui-libraries/ui_libraries.md)
+    * ### [UI Libraries](./frontend/react/ui-libraries/ui_libraries.md)
         * Introduction to UI Libraries
         * Material UI
             * Components (Buttons, Cards, Dialogs, Forms)
@@ -853,28 +851,28 @@
 
 
 * ### DevOps & Deployment
-    * ### [Build Tools](https://github.com/tinitiateprime/java-fullstack/blob/main/devops/build-tools/build_tools.md)
+    * ### [Build Tools](./devops/build-tools/build_tools.md)
         * Maven
         * Gradle
-    * ### [Version Control](https://github.com/tinitiateprime/java-fullstack/blob/main/devops/version-control/version_control.md)
+    * ### [Version Control](./devops/version-control/version_control.md)
         * Git Basics
         * Branching & Merging
         * Pull Requests & Code Reviews
-    * ### [CI/CD & Deployment](https://github.com/tinitiateprime/java-fullstack/blob/main/devops/cicd-deployment/cicd_deployment.md)
+    * ### [CI/CD & Deployment](./devops/cicd-deployment/cicd_deployment.md)
         * Docker
         * Kubernetes (basics)
         * Cloud Platforms (AWS, Azure)
         * CI/CD Pipelines (Jenkins, GitHub Actions)
 
 * ### Testing & Quality
-    * ### [Unit Testing](https://github.com/tinitiateprime/java-fullstack/blob/main/testing/unit-testing/unit_testing.md)
+    * ### [Unit Testing](./testing/unit-testing/unit_testing.md)
         * JUnit 5
         * Assertions & Test Suites
-    * ### [Mocking & Integration Testing](https://github.com/tinitiateprime/java-fullstack/blob/main/testing/integration-testing/integration_testing.md)
+    * ### [Mocking & Integration Testing](./testing/integration-testing/integration_testing.md)
         * Mockito
         * SpringBootTest
         * TestContainers for Database Tests
-    * ### [Best Practices](https://github.com/tinitiateprime/java-fullstack/blob/main/testing/best-practices/testing_best_practices.md)
+    * ### [Best Practices](./testing/best-practices/testing_best_practices.md)
         * TDD Basics
         * Coverage & CI Integration
 
@@ -886,6 +884,6 @@
         * Authentication with JWT
         * Deployment using Docker & AWS
 
-* ### [Spring Boot Projects](https://github.com/tinitiateprime/java-fullstack/blob/main/projects-mindmap/projectsMindMaps.md)
+* ### [Spring Boot Projects](./projects-mindmap/projectsMindMaps.md)
     * HR Management System Mindmap
     * Shopping Cart System Mindmap

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<students>
+    <student>
+        <name>Alice</name>
+        <course>Java</course>
+    </student>
+    <student>
+        <name>Ravi</name>
+        <course>Python</course>
+    </student>
+</students>

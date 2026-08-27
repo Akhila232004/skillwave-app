@@ -49,7 +49,6 @@ import {
   FaLock,
   FaEye,
   FaEyeSlash,
-  FaGoogle,
   FaFacebookF,
   FaWhatsapp,
 } from "react-icons/fa";
@@ -895,7 +894,29 @@ export default function SignupPage() {
 
                   <span className="inline-flex items-center gap-2">
 
-                    <FaGoogle />
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fill="#4285F4"
+                        d="M21.35 12.27c0-.79-.07-1.55-.22-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.42z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 21.99c2.63 0 4.84-.87 6.45-2.35l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.55 0-4.71-1.72-5.49-4.03H3.27v2.53A9.74 9.74 0 0 0 12 21.99z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M6.51 14.08a5.85 5.85 0 0 1 0-3.72V7.83H3.27a10 10 0 0 0 0 8.78l3.24-2.53z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 6.33c1.43 0 2.72.49 3.73 1.45l2.8-2.8C16.83 3.43 14.63 2.5 12 2.5a9.74 9.74 0 0 0-8.73 5.33l3.24 2.53C7.29 8.05 9.45 6.33 12 6.33z"
+                      />
+                    </svg>
 
                     {googleReady
                       ? "Continue with Google"

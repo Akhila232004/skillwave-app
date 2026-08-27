@@ -887,6 +887,12 @@ const selectInterviewQuestionSections = (
       }
     | null = null;
 
+  // First, try to detect the traditional interview-question format.
+  // Examples:
+  //   ## What is AWS?
+  //   ## Explain S3 versioning
+  //   ## Q1: What is an S3 bucket?
+  //   ## Question 1: What is an S3 bucket?
   for (let headingLevel = 2; headingLevel <= 6; headingLevel += 1) {
     const sections = buildInterviewSectionCandidates(
       markdown,
@@ -926,7 +932,49 @@ const selectInterviewQuestionSections = (
     }
   }
 
-  return best?.sections || [];
+  if (best) {
+    return best.sections;
+  }
+
+  // Some course files are topic-based rather than question-based.
+  // For example:
+  //   ## S3 Core Storage
+  //   ## S3 Storage Classes
+  //   ## S3 Versioning
+  //
+  // These headings are still intended to become individual cards, even
+  // though they do not look like questions. If no question-style heading
+  // level qualified above, use the top-level content sections (H2) as cards.
+  const topicSections = buildInterviewSectionCandidates(
+    markdown,
+    headings,
+    2,
+    courseTitle,
+    markdownUrl
+  );
+
+  if (topicSections.length > 0) {
+    return topicSections;
+  }
+
+  // Finally, support documents whose content sections are nested below H2.
+  // Choose the shallowest available heading level rather than returning the
+  // whole document as one card.
+  for (let headingLevel = 3; headingLevel <= 6; headingLevel += 1) {
+    const nestedSections = buildInterviewSectionCandidates(
+      markdown,
+      headings,
+      headingLevel,
+      courseTitle,
+      markdownUrl
+    );
+
+    if (nestedSections.length > 0) {
+      return nestedSections;
+    }
+  }
+
+  return [];
 };
 
 const getMarkdownOutlineTitles = (headings: MarkdownHeading[]) => {
@@ -1026,7 +1074,7 @@ const uniquifyInterviewCourseSlugs = (items: InterviewQuestionDetail[]) => {
 const getMarkdownInterviewCourses = async (
   repoRef?: string
 ): Promise<InterviewQuestionDetail[]> => {
-  const { entries, repoName } = await readRepoDirectory("interview-qna", undefined, repoRef);
+  const { entries, repoName } = await readRepoDirectory("interview", undefined, repoRef);
   const markdownFiles = entries
     .filter((entry) => entry.type === "file")
     .filter((entry) => /\.md$/i.test(entry.name) && !/^readme\.md$/i.test(entry.name))

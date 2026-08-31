@@ -6,6 +6,7 @@ import {
   CONTENT_REPO_OWNER,
   buildContentRepoRawUrl,
   getContentRepoDisplayName,
+  getContentRepoNameCandidates,
   normalizeContentRepoPath,
   resolveContentRepoPath,
 } from "./content-repo-config";
@@ -46,7 +47,7 @@ const fetchGitHubText = async (url: string): Promise<string> => {
 
 export async function readRepoContentSource(
   repoFilePath: string,
-  _preferredRepoName?: string,
+  preferredRepoName?: string,
   repoRef = CONTENT_REPO_BRANCH
 ): Promise<RepoContentSource> {
   const normalizedPath = normalizeContentRepoPath(repoFilePath);
@@ -55,12 +56,21 @@ export async function readRepoContentSource(
     throw new Error("Content file path is empty");
   }
 
+  const repoName =
+    getContentRepoNameCandidates(preferredRepoName)[0] ||
+    CONTENT_REPO_NAME;
+
   const resolvedPath = resolveContentRepoPath(normalizedPath);
 
   const rawUrl = buildContentRepoRawUrl(
     resolvedPath,
-    CONTENT_REPO_NAME,
+    repoName,
     repoRef
+  );
+
+  console.log(
+    "SKILLWAVE CONTENT REPO:",
+    `${CONTENT_REPO_OWNER}/${repoName}`
   );
 
   console.log(
@@ -71,7 +81,7 @@ export async function readRepoContentSource(
   const text = await fetchGitHubText(rawUrl);
 
   return {
-    repoName: `${CONTENT_REPO_OWNER}/${CONTENT_REPO_NAME}`,
+    repoName: `${CONTENT_REPO_OWNER}/${repoName}`,
     text,
     url: rawUrl,
   };
@@ -109,7 +119,7 @@ const KNOWN_INTERVIEW_FILES = [
 
 export async function readRepoDirectory(
   repoFolderPath: string,
-  _preferredRepoName?: string,
+  preferredRepoName?: string,
   repoRef = CONTENT_REPO_BRANCH
 ): Promise<{
   repoName: string;
@@ -121,6 +131,10 @@ export async function readRepoDirectory(
     throw new Error("Content directory path is empty");
   }
 
+  const repoName =
+    getContentRepoNameCandidates(preferredRepoName)[0] ||
+    CONTENT_REPO_NAME;
+
   /*
    * The interview loader currently needs a directory listing.
    * Raw GitHub does not provide one, so we maintain the known
@@ -131,17 +145,20 @@ export async function readRepoDirectory(
    */
   if (normalizedPath === "interview") {
     return {
-      repoName: `${CONTENT_REPO_OWNER}/${CONTENT_REPO_NAME}`,
+      repoName: `${CONTENT_REPO_OWNER}/${repoName}`,
+
       entries: KNOWN_INTERVIEW_FILES.map((filePath) => {
-        const name = filePath.split("/").pop() || filePath;
+        const name =
+          filePath.split("/").pop() || filePath;
 
         return {
           name,
           path: filePath,
           type: "file" as const,
+
           downloadUrl: buildContentRepoRawUrl(
             filePath,
-            CONTENT_REPO_NAME,
+            repoName,
             repoRef
           ),
         };

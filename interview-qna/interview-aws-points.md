@@ -1,17 +1,9 @@
-# AWS Interview Points
-> (c) venkata Bhattaram | TINITIATE.COM
-
-* Consolidated talking points for Interview Prep
-
-
-## AWS S3
+# AWS S3
 | Service | Logo |
 | --- | --- |
 | Amazon S3 | ![Amazon S3](https://img.shields.io/badge/Amazon%20S3-569A31?style=for-the-badge&logo=amazons3&logoColor=white) |
 
----
-
-### S3 Core Storage
+## S3 Core Storage
 
 * Core storage concepts: how S3 works as object storage, where data lives, and how it scales
 
@@ -79,7 +71,7 @@ mindmap
       Old eventual consistency model no longer applies to any operation
 ```
 
-**Key Points**
+### Key Points
 * Object storage — not a file system; access is by key via HTTP/HTTPS API, not file path
 * Bucket names must be globally unique across all AWS accounts
 * Multi-AZ durability is 11 nines (99.999999999%) — built-in, no configuration needed
@@ -87,16 +79,10 @@ mindmap
 * Request rate limits are per prefix: spread data across prefixes to increase aggregate throughput
 * S3 has strong read-after-write consistency for all operations since December 2020
 
-**QnA**
-* What is Amazon S3? — Object storage service for files, backups, logs, media, and data lakes
-* How does S3 handle durability? — Automatic multi-AZ replication gives 11 nines durability; no action needed
-* What are the key request rate limits? — 5500 GET and 3500 PUT per prefix per second; add prefixes for more throughput
-* What limits matter most in interviews? — 5 TB max object, 5 GB single PUT, 100 buckets default, 11 nines durability
-* Is S3 strongly consistent? — Yes, since December 2020 all S3 operations have strong read-after-write consistency
 
 ---
 
-### S3 Storage Classes
+## S3 Storage Classes
 
 * Standard and Intelligent-Tiering: classes for frequently accessed data with no retrieval fees
 
@@ -148,8 +134,7 @@ mindmap
       Min 180 day storage charge
       Compliance long-term archives
 ```
-
-**Key Points**
+### Key Points
 * Standard is default — multi-AZ, low latency, no retrieval fees; best for frequently accessed data
 * Intelligent-Tiering auto-moves objects between access tiers; no retrieval fees but has small per-object monitoring fee
 * Standard-IA and One Zone-IA both charge retrieval fees; 30-day minimum storage duration applies
@@ -158,15 +143,11 @@ mindmap
 * Minimum storage durations: IA=30d, Glacier Instant/Flexible=90d, Deep Archive=180d — early deletion still charged
 * Lifecycle policies automate transitions between storage classes based on age rules
 
-**QnA**
-* When use Standard-IA vs Glacier? — IA for occasional access needing quick retrieval; Glacier for archives rarely needed
-* What is Intelligent-Tiering? — Auto-tiering class that moves objects based on actual access patterns without retrieval fees
-* What is the cheapest S3 class? — Glacier Deep Archive; suits compliance archives with 12–48 hr retrieval SLA
-* Gotcha for One Zone-IA? — Single AZ means data loss if AZ fails; only for regeneratable or replicated data
+
 
 ---
 
-### S3 Versioning
+## S3 Versioning
 
 * The three versioning states a bucket can be in: unversioned, enabled, or suspended
 
@@ -236,8 +217,7 @@ mindmap
     S3 Batch Replication works with versions
       Backfills existing versioned objects to a new or replica bucket
 ```
-
-**Key Points**
+### Key Points
 * Versioning must be explicitly enabled; once enabled it can only be suspended, never fully disabled
 * Every PUT creates a new version with a unique version ID; GET without version ID returns the current version
 * DELETE without version ID adds a delete marker — the object appears deleted but all versions still exist in S3
@@ -246,15 +226,10 @@ mindmap
 * Versioning is a prerequisite for Cross-Region Replication and Object Lock
 * All versions count toward storage billing; use lifecycle noncurrent-version expiration rules to control cost
 
-**QnA**
-* Can you disable versioning once enabled? — No, only suspend; all existing version IDs are preserved
-* How does delete work with versioning? — DELETE adds a delete marker; GET returns 404 but data is still there with old version IDs
-* How do you permanently delete a versioned object? — DELETE with the specific version ID removes that version permanently
-* Why enable MFA Delete? — Prevents accidental or malicious permanent deletion without a second authentication factor
 
 ---
 
-### S3 Lifecycle Policies
+## S3 Lifecycle Policies
 
 * Rules that automatically move objects to cheaper storage classes based on object age
 
@@ -316,7 +291,7 @@ mindmap
       Clean up staging or temporary data after processing is complete
 ```
 
-**Key Points**
+### Key Points
 * Lifecycle rules have two action types: transition (move to cheaper class) and expiration (delete objects)
 * Minimum storage durations still apply during transitions: IA=30d, Glacier=90d, Deep Archive=180d
 * Scope rules to entire bucket or filter by prefix, object tag, or object size range
@@ -324,14 +299,10 @@ mindmap
 * Expire noncurrent versions with a noncurrent-version expiration rule to control versioning storage cost
 * Delete expired delete markers automatically to keep bucket metadata clean
 
-**QnA**
-* What is a lifecycle policy? — Rules that automatically transition or delete S3 objects based on age or version state
-* How do you reduce S3 storage cost over time? — Lifecycle transitions to IA or Glacier, expiration rules, expire old versions
-* What is commonly forgotten in lifecycle setup? — Aborting incomplete multipart uploads; they silently accumulate and add cost
 
 ---
 
-### S3 Security and Encryption
+## S3 Security and Encryption
 
 * Server-side encryption options: AWS-managed key, customer KMS key, or customer-provided key
 
@@ -413,7 +384,7 @@ mindmap
       Track error rates, latency, and bucket size trends with alarms
 ```
 
-**Key Points**
+### Key Points
 * SSE-S3: AWS manages the key; no extra cost; simplest to enable; good default for most workloads
 * SSE-KMS: customer controls the key via KMS; adds per-request audit trail in CloudTrail; KMS API costs apply at scale
 * SSE-C: customer provides the key on every request; AWS never stores the key; highest customer control
@@ -421,15 +392,10 @@ mindmap
 * Block Public Access should be on at account level; only disable per bucket when explicitly hosting public content
 * Access Points give each team or application its own named endpoint with its own access policy scoped to a prefix
 
-**QnA**
-* Difference between SSE-S3 and SSE-KMS? — SSE-S3 is simpler; SSE-KMS adds key control, audit trail per request, and KMS pricing
-* How do you force HTTPS on S3? — Bucket policy with Deny when `aws:SecureTransport` condition is false
-* What is an S3 Access Point? — Named endpoint with its own access policy scoped to specific prefixes or applications
-* What is Object Lock? — WORM protection that prevents deletion or overwrite for a defined retention period; requires versioning
 
 ---
 
-### S3 Replication
+## S3 Replication
 
 * CRR vs SRR: when to replicate across regions vs within the same region, and the use cases for each
 
@@ -492,7 +458,7 @@ mindmap
       One source bucket can replicate objects to multiple target buckets
 ```
 
-**Key Points**
+### Key Points
 * CRR replicates to a different region for DR or compliance; SRR replicates within the same region for aggregation or dev/test
 * Versioning must be enabled on both source and destination buckets before replication can start
 * Replication is asynchronous and only applies to new objects written after replication is configured
@@ -501,14 +467,9 @@ mindmap
 * Permanent deletes (DELETE with version ID) are never replicated — important for compliance separation
 * Replication Time Control (RTC) provides a 15-minute SLA with CloudWatch metrics for SLA evidence
 
-**QnA**
-* Difference between CRR and SRR? — CRR crosses regions for DR; SRR stays in region for aggregation or dev/test copies
-* Does replication backfill existing objects? — No; use S3 Batch Replication to copy pre-existing objects
-* Are deletes replicated? — Delete markers are optional; permanent version deletes are never replicated
-
 ---
 
-### S3 as Data Lake
+## S3 as Data Lake
 
 * The three-zone data lake pattern: raw landing, curated transform, and consumption serving layers
 
@@ -600,7 +561,7 @@ mindmap
       Sweet spot for columnar query performance in analytics workloads
 ```
 
-**Key Points**
+### Key Points
 * Pattern: Raw zone (S3) → Curated zone (Parquet/Iceberg) → Consumption zone (Athena, Redshift)
 * Always use columnar formats (Parquet/ORC) in curated layers — critical for Athena scan cost and query speed
 * Partition by date or common filter columns so query engines prune scan scope and skip irrelevant files
@@ -614,15 +575,11 @@ mindmap
 * Glue Catalog integration — Athena, Redshift, and Spark can discover and query tables
 * Use S3 Tables for curated analytical Iceberg tables; plain S3 prefixes for raw landing zones
 
-**QnA**
-* What makes S3 a data lake? — Unlimited scale, any format, query-in-place with Athena/Glue/EMR, open table format support
-* What is the small-file problem? — Too many tiny files in S3 create metadata overhead for query engines; compact into larger files
-* How do you partition a data lake in S3? — Use Hive-style prefix paths like year=2024/month=01/day=15 for partition pruning
-* When use Iceberg vs plain Parquet? — Use Iceberg when you need updates, deletes, time travel, schema evolution, or ACID guarantees
+*
 
 ---
 
-### S3 and EventBridge
+## S3 and EventBridge
 
 * S3 event types that EventBridge receives and can route to downstream targets for automation
 
@@ -698,7 +655,7 @@ mindmap
       Drive classification or governance automation on object tag changes
 ```
 
-**Key Points**
+### Key Points
 * Enable EventBridge on a bucket to send all S3 events to the default event bus
 * EventBridge offers richer filtering (prefix, suffix, object metadata conditions) compared to native S3 notifications
 * One S3 event can route to multiple EventBridge rules targeting different services simultaneously
@@ -713,7 +670,7 @@ mindmap
 
 ---
 
-### S3 Event Notifications
+## S3 Event Notifications
 * Event Notifications - Native Destinations
 * The three native S3 notification destinations — SQS, SNS, Lambda — plus the EventBridge option
 
@@ -774,7 +731,7 @@ mindmap
       Lost events cannot be recovered, use EventBridge for event durability
 ```
 
-**Key Points**
+### Key Points
 * Native S3 notifications support SQS, SNS, and Lambda; enable EventBridge for richer routing
 * Filtering is limited to object key prefix and suffix — no metadata, tag, or size-based filtering
 * Each event configuration rule can point to only one destination — use EventBridge for fan-out
@@ -782,14 +739,11 @@ mindmap
 * Common pattern: S3 → SQS → Lambda polling — decouples traffic spikes and adds retry with DLQ support
 * For richer filtering, multiple targets, or event replay, enable EventBridge at the bucket level
 
-**QnA**
-* What are native S3 event destinations? — SQS, SNS, Lambda, and EventBridge (when enabled on the bucket)
-* Limitation of S3 native event filtering? — Only prefix and suffix; no metadata, content, or tag filtering
-* Why put SQS between S3 and Lambda? — Buffers traffic spikes, enables retry logic, and supports DLQ for failures
+
 
 ---
 
-### S3 Performance and Optimization
+## S3 Performance and Optimization
 
 * How per-prefix rate limits work and key strategies to spread load and increase aggregate throughput
 
@@ -863,7 +817,7 @@ mindmap
       Fewer direct S3 requests lowers cost and improves response time
 ```
 
-**Key Points**
+### Key Points
 * S3 scales automatically but per-prefix limits apply: 5500 GET / 3500 PUT per prefix per second
 * Spread key prefixes to avoid hot spots — avoid all objects under a single date-stamped prefix at scale
 * Use multipart upload for objects larger than 100 MB — improves reliability and allows parallel part uploads
@@ -871,14 +825,11 @@ mindmap
 * S3 Select lets query engines filter data inside S3 before returning it, reducing transferred bytes and compute cost
 * For analytics workloads, use Parquet/ORC with snappy compression and file sizes of 128 MB–1 GB
 
-**QnA**
-* How do you increase S3 throughput? — Use multiple key prefixes; each prefix gets 5500 GET and 3500 PUT per second
-* What is S3 Transfer Acceleration? — Routes uploads through CloudFront edges for better global upload performance
-* What is S3 Select? — Server-side SQL filtering of S3 objects (CSV, JSON, Parquet) to reduce data returned to client
+
 
 ---
 
-### S3 Limitations
+## S3 Limitations
 
 * Size and count limits that apply to S3 objects and buckets — critical numbers for interviews
 
@@ -957,7 +908,7 @@ mindmap
       All rename operations require a full object copy by the caller
 ```
 
-**Key Points**
+### Key Points
 * S3 is object storage — no partial in-place updates; PUT replaces the entire object every time
 * No atomic multi-object transactions — you cannot update multiple objects as a single atomic operation
 * Renaming a prefix requires copying all objects then deleting originals — very expensive at scale with millions of objects
@@ -966,14 +917,11 @@ mindmap
 * Egress costs: data transferred out to internet or cross-region is charged; within the same region is generally free
 * Bucket names and regions cannot be changed after creation
 
-**QnA**
-* Can you rename an S3 folder? — Not natively; it requires copying all objects to the new prefix and deleting the originals
-* What are common S3 cost surprises? — Versioning storage, incomplete multipart uploads, Glacier retrieval fees, egress charges
-* Is S3 suitable for transactional workloads? — No; no partial updates, no multi-object atomicity, no locking primitives
+
 
 ---
 
-### S3 Real-time and Batch Processing
+## S3 Real-time and Batch Processing
 
 * Patterns for processing S3 data in seconds or near-real-time immediately after file arrival
 
@@ -1043,7 +991,7 @@ mindmap
       Managed connectors for Salesforce, Slack, Marketo, and other SaaS sources
 ```
 
-**Key Points**
+### Key Points
 * Real-time: S3 event or EventBridge triggers Lambda or Step Functions for per-file processing within seconds of upload
 * Near real-time: Kinesis Firehose buffers streaming records and writes batched files to S3 in configurable intervals
 * Batch: Glue, EMR, Athena, and Airflow orchestrate scheduled jobs reading large S3 datasets on a schedule
@@ -1051,14 +999,11 @@ mindmap
 * Hudi Merge-on-Read enables near-real-time table updates in S3 without full partition rewrites
 * Compaction is always needed after streaming writes to merge many small files into efficient analytical file sizes
 
-**QnA**
-* How do you process files as soon as they land in S3? — S3 event notification or EventBridge rule → Lambda or Step Functions
-* What is S3 Batch Operations? — Managed job that runs Lambda over millions of S3 objects from a manifest or S3 Inventory report
-* How does Firehose write to S3? — Buffers incoming stream records and writes batched files based on size threshold or time interval
+
 
 ---
 
-### S3 Advanced Use Cases
+## S3 Advanced Use Cases
 
 * Intercepting S3 GET requests to transform objects in-flight with Lambda before returning to caller
 
@@ -1132,7 +1077,7 @@ mindmap
     Used for secure file sharing
 ```
 
-**Key Points**
+### Key Points
 * S3 Object Lambda intercepts GET requests and runs a Lambda to transform the object before returning to caller — useful for PII redaction, format conversion, image resizing without storing multiple copies
 * S3 Select pushes down filtering into S3 so only matching rows are returned — reduces compute and transfer cost for Athena and Glue pipelines
 * S3 Inventory generates scheduled reports of all objects with metadata — use as input to Batch Operations or for usage auditing
@@ -1140,15 +1085,11 @@ mindmap
 * Object Lock compliance mode prevents deletion even by root account for the full retention period — required for SEC/FINRA compliance
 * Presigned URLs grant temporary scoped access (GET or PUT) to a specific object without exposing credentials
 
-**QnA**
-* What is S3 Object Lambda? — Runs a Lambda on every GET to transform data in-flight before returning to the caller
-* What is S3 Select? — Server-side SQL filtering on S3 objects that reduces data transferred to clients or query engines
-* What is WORM protection in S3? — Object Lock compliance mode; objects cannot be deleted for the retention period even by root
-* What are presigned URLs used for? — Granting temporary access to upload or download specific objects without sharing credentials
+
 
 ---
 
-### S3 Monitoring and Observability
+## S3 Monitoring and Observability
 
 * API-level audit logging: who called what S3 operation, when, and from where — for compliance and investigation
 
@@ -1227,18 +1168,15 @@ mindmap
       Supports GDPR, HIPAA, PCI-DSS, and other regulatory requirements
 ```
 
-**Key Points**
+### Key Points
 * CloudTrail data events log every object-level operation (GET, PUT, DELETE) — high volume; enable selectively on critical buckets
 * S3 Server Access Logs record HTTP-level request details; useful for auditing access patterns and debugging 403/404 errors
 * CloudWatch Metrics track bucket size, object count, request counts, and error rates — set alarms on 5xx error spikes
 * S3 Storage Lens gives organization-wide visibility across all accounts and buckets with activity metrics and cost recommendations
 * Amazon Macie scans S3 for sensitive data like PII, credentials, and financial data using ML — findings route to EventBridge for automated response
 
-**QnA**
-* How do you audit who accessed an S3 object? — Enable CloudTrail data events for the bucket; each GET/PUT/DELETE is logged
-* What is S3 Storage Lens? — Organization-wide dashboard for S3 usage, activity metrics, and storage cost recommendations
-* What is Amazon Macie? — ML-based service that detects sensitive and PII data in S3 buckets and sends findings to EventBridge
 
+---
 
 ## AWS Airflow
 | Service | Logo |
@@ -1260,6 +1198,10 @@ mindmap
 * Brief QnA: Can Airflow be event driven? Yes, but it is primarily scheduler-based; event-driven patterns usually involve EventBridge, Lambda, or sensors.
 * Airflow QnA: When should I use Airflow? Use it when a workflow has dependencies, retries, scheduling, monitoring, and multiple steps across systems.
 * Airflow QnA: When should I not use Airflow? Do not use it as the main compute engine for heavy processing; use it to orchestrate jobs running elsewhere.
+
+
+---
+
 
 ## RDS
 | Service | Logo |
@@ -1288,6 +1230,9 @@ mindmap
 * RDS QnA: What are the key availability features in RDS? Multi-AZ improves failover and availability, while read replicas help scale reads.
 * RDS QnA: When is RDS not the best fit? It is not ideal for internet-scale key-value access patterns or large analytical data lake storage.
 * RDS QnA: How does DMS help with RDS? It supports low-downtime migration and CDC-based replication into RDS or Aurora.
+
+---
+
 
 ## DynamoDB
 | Service | Logo |
@@ -1318,6 +1263,8 @@ mindmap
 * DynamoDB QnA: What is the most important design principle in DynamoDB? Design the table around access patterns and choose partition keys carefully.
 * DynamoDB QnA: What are common DynamoDB limitations? No joins, no stored procedures, 400 KB item size limit, and possible hot partitions.
 * DynamoDB QnA: What features help with scale and integration? Streams, Global Tables, TTL, GSIs, and on-demand capacity mode.
+
+---
 
 ## AWS Athena
 | Service | Logo |
@@ -1358,6 +1305,8 @@ mindmap
 * Iceberg QnA: What is the relationship between Athena and Iceberg? Athena is the query engine, and Iceberg is the table format Athena can read and update.
 * Iceberg QnA: When would you choose Iceberg? Choose it when curated analytical tables need updates, deletes, time travel, and long-term maintainability beyond simple file-based datasets.
 
+---
+
 ## ECS
 | Service | Logo |
 | --- | --- |
@@ -1378,6 +1327,8 @@ mindmap
 * ECS QnA: ECS or EKS? Choose ECS for simpler AWS-native operations, and choose EKS when Kubernetes portability or ecosystem tooling is required.
 * ECS QnA: Is ECS good for data engineering and microservices? Yes, it works well for ETL workers, APIs, background jobs, and event-driven services.
 
+---
+
 ## ECR
 | Service | Logo |
 | --- | --- |
@@ -1395,6 +1346,8 @@ mindmap
 * ECR QnA: What is ECR? It is AWS's private container image registry for storing and distributing Docker-compatible images.
 * ECR QnA: When should I use ECR? Use it when workloads run on ECS, EKS, Batch, or Lambda container images inside AWS.
 * ECR QnA: Why choose ECR over public registries? IAM integration, private access, lifecycle policies, image scanning, and tighter AWS integration.
+
+---
 
 ## EKS
 | Service | Logo |
@@ -1416,6 +1369,7 @@ mindmap
 * EKS QnA: What is the main tradeoff with EKS? It offers more flexibility than ECS, but it brings more operational complexity and cost.
 * EKS QnA: Is EKS useful for AI/ML and data engineering? Yes, especially for Spark, Ray, Kafka-related tooling, GPU workloads, and platform-standardized container systems.
 
+---
 
 ## Iceberg
 | Pattern | Component | Service / Option | Implementation |
@@ -1438,6 +1392,8 @@ mindmap
 | REST catalog | Catalog | Iceberg REST Catalog (Glue / Rest Server DB) | Catalog service manages table metadata endpoints |
 | REST catalog | Metadata Files | Amazon S3 | Metadata JSON, manifest list, manifest files |
 | REST catalog | Data Files | Amazon S3 | Parquet, ORC, or Avro data files |
+
+---
 
 ## Hudi / Real-Time Ingestion
 | Pattern | Component | Service / Option | Implementation |
@@ -1488,6 +1444,8 @@ mindmap
 * Hudi QnA: How is Hudi different from plain Parquet in S3? Parquet is only a file format, while Hudi manages updates, deletes, metadata, and table services across many files.
 * Hudi QnA: Can Athena query Hudi? Yes, Athena can read Hudi datasets using supported query modes, but Athena is not the primary Hudi writer.
 
+---
+
 ## DMS
 | Service | Logo |
 | --- | --- |
@@ -1514,6 +1472,8 @@ mindmap
 * DMS QnA: What is full load plus CDC? It means DMS first copies existing rows and then continuously applies source changes until cutover.
 * DMS QnA: Does DMS convert stored procedures and application code? No, DMS mainly moves data; schema and code conversion need separate planning and tools.
 * DMS QnA: What are common DMS issues? LOB performance, missing source log configuration, unsupported data types, network bottlenecks, and target constraint failures.
+
+---
 
 ## Glue
 | Service | Logo |
@@ -1542,6 +1502,8 @@ mindmap
 * Glue QnA: What is a Glue crawler? It scans data sources and creates or updates catalog metadata.
 * Glue QnA: What are common Glue best practices? Use Parquet, partition data carefully, control schema evolution, enable bookmarks when appropriate, and monitor jobs in CloudWatch.
 
+---
+
 ## Lambda
 | Service | Logo |
 | --- | --- |
@@ -1567,6 +1529,8 @@ mindmap
 * Lambda QnA: What is a cold start? It is the extra startup latency when AWS initializes a new execution environment for a function.
 * Lambda QnA: How do you handle retries safely? Make processing idempotent and use DLQs, destinations, or queue redrive policies.
 * Lambda QnA: When should I avoid Lambda? Avoid it for long-running jobs, heavy ETL, high-memory compute beyond limits, or workloads needing full server/container control.
+
+---
 
 ## Step Functions
 | Service | Logo |

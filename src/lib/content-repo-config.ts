@@ -10,15 +10,34 @@ const splitUrlPath = (value: string) =>
     .split("/")
     .filter(Boolean);
 
+const normalizeRepoName = (value: string) => {
+  const normalized = trimSlashes(value);
+
+  if (!normalized) {
+    return "";
+  }
+
+  const parts = normalized.split("/").filter(Boolean);
+
+  // Accept either:
+  //   tinitiateai-skillwave
+  // or:
+  //   Akhila232004/tinitiateai-skillwave
+  //
+  // Internally we only need the repository name.
+  return parts.length > 1 ? parts[parts.length - 1] : parts[0];
+};
+
 export const CONTENT_REPO_OWNER =
   process.env.NEXT_PUBLIC_CONTENT_REPO_OWNER ||
   process.env.CONTENT_REPO_OWNER ||
   skillwaveConfig.contentRepository.owner;
 
-export const CONTENT_REPO_NAME =
+export const CONTENT_REPO_NAME = normalizeRepoName(
   process.env.NEXT_PUBLIC_CONTENT_REPO_NAME ||
-  process.env.CONTENT_REPO_NAME ||
-  skillwaveConfig.contentRepository.repository;
+    process.env.CONTENT_REPO_NAME ||
+    skillwaveConfig.contentRepository.repository
+);
 
 export const CONTENT_REPO_BRANCH =
   process.env.NEXT_PUBLIC_CONTENT_REPO_BRANCH ||
@@ -73,9 +92,9 @@ export const getContentRepoPathCandidates = (filePath: string) => {
 export const getContentRepoNameCandidates = (
   preferredRepoName?: string
 ) => {
-  const repoName = String(
+  const repoName = normalizeRepoName(
     preferredRepoName || CONTENT_REPO_NAME || ""
-  ).trim();
+  );
 
   return repoName ? [repoName] : [];
 };
@@ -84,28 +103,58 @@ export const buildContentRepoRawUrl = (
   filePath: string,
   repoName = CONTENT_REPO_NAME,
   repoRef = CONTENT_REPO_BRANCH
-) =>
-  `https://raw.githubusercontent.com/${CONTENT_REPO_OWNER}/${repoName}/${repoRef}/${resolveContentRepoPath(
-    filePath
-  )}`;
+) => {
+  const normalizedRepoName = normalizeRepoName(repoName);
+
+  if (!CONTENT_REPO_OWNER) {
+    throw new Error("Content repository owner is not configured");
+  }
+
+  if (!normalizedRepoName) {
+    throw new Error("Content repository name is not configured");
+  }
+
+  if (!repoRef) {
+    throw new Error("Content repository branch is not configured");
+  }
+
+  const resolvedPath = resolveContentRepoPath(filePath);
+
+  if (!resolvedPath) {
+    throw new Error("Content repository file path is empty");
+  }
+
+  return `https://raw.githubusercontent.com/${CONTENT_REPO_OWNER}/${normalizedRepoName}/${repoRef}/${resolvedPath}`;
+};
 
 export const buildContentRepoBlobUrl = (
   filePath: string,
   repoName = CONTENT_REPO_NAME
-) =>
-  `https://github.com/${CONTENT_REPO_OWNER}/${repoName}/blob/${CONTENT_REPO_BRANCH}/${resolveContentRepoPath(
-    filePath
-  )}`;
+) => {
+  const normalizedRepoName = normalizeRepoName(repoName);
+  const resolvedPath = resolveContentRepoPath(filePath);
+
+  if (!normalizedRepoName) {
+    throw new Error("Content repository name is not configured");
+  }
+
+  return `https://github.com/${CONTENT_REPO_OWNER}/${normalizedRepoName}/blob/${CONTENT_REPO_BRANCH}/${resolvedPath}`;
+};
 
 export const buildContentRepoTreeUrl = (
   folderPath = "",
   repoName = CONTENT_REPO_NAME
 ) => {
+  const normalizedRepoName = normalizeRepoName(repoName);
   const resolvedPath = resolveContentRepoPath(folderPath);
 
+  if (!normalizedRepoName) {
+    throw new Error("Content repository name is not configured");
+  }
+
   return resolvedPath
-    ? `https://github.com/${CONTENT_REPO_OWNER}/${repoName}/tree/${CONTENT_REPO_BRANCH}/${resolvedPath}`
-    : `https://github.com/${CONTENT_REPO_OWNER}/${repoName}/tree/${CONTENT_REPO_BRANCH}`;
+    ? `https://github.com/${CONTENT_REPO_OWNER}/${normalizedRepoName}/tree/${CONTENT_REPO_BRANCH}/${resolvedPath}`
+    : `https://github.com/${CONTENT_REPO_OWNER}/${normalizedRepoName}/tree/${CONTENT_REPO_BRANCH}`;
 };
 
 export const getContentRepoDisplayName = () =>
@@ -123,6 +172,7 @@ export const parseContentRepoPathFromUrl = (
   try {
     const url = new URL(urlString);
     const parts = splitUrlPath(url.pathname);
+
     const repoNameCandidates = new Set(
       getContentRepoNameCandidates()
     );

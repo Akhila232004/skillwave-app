@@ -102,19 +102,6 @@ const resolveMaybeRelativeUrl = (url: string, baseUrl?: string) => {
 
   if (baseUrl) {
     try {
-      // Links beginning with "/" in SkillWave content are commonly
-      // written relative to the course/content root, not the web origin.
-      // Resolve them against the directory containing the source README.
-      if (v.startsWith("/")) {
-        const base = new URL(baseUrl);
-        const baseDirectory = base.pathname.replace(/[^/]+$/, "");
-        const relativePath = v.replace(/^\/+/, "");
-        base.pathname = `${baseDirectory}${relativePath}`;
-        base.search = "";
-        base.hash = "";
-        return toRawGithub(base.toString());
-      }
-
       return toRawGithub(new URL(v, baseUrl).toString());
     } catch {
       return v;

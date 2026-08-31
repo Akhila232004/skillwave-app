@@ -1,4 +1,4 @@
-"use client";
+
 
 import Image from "next/image";
 
@@ -230,6 +230,12 @@ export default function SignupPage() {
   const [loading, setLoading] =
     useState(false);
 
+  // Track which authentication action is currently running so that
+  // starting Google/Facebook does not unnecessarily disable the other
+  // authentication options.
+  const [authLoading, setAuthLoading] =
+    useState<"google" | "facebook" | "whatsapp" | null>(null);
+
   const [error, setError] =
     useState("");
 
@@ -245,6 +251,30 @@ export default function SignupPage() {
     googleReady,
     setGoogleReady,
   ] = useState(false);
+
+  /*
+   * Reset transient authentication state when the page becomes active
+   * again. This is important when the browser restores this page from
+   * its back/forward cache after an OAuth redirect.
+   */
+  useEffect(() => {
+    const resetAuthState = () => {
+      setLoading(false);
+      setAuthLoading(null);
+    };
+
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        resetAuthState();
+      }
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, []);
 
   /*
    * Redirect authenticated users.
@@ -398,6 +428,9 @@ export default function SignupPage() {
      * The API stores the number in
      * data/users.json.
      */
+    setAuthLoading("whatsapp");
+    setLoading(true);
+
     try {
       const response =
         await fetch(
@@ -469,6 +502,9 @@ export default function SignupPage() {
       setError(
         "Could not save the WhatsApp number. Please try again."
       );
+    } finally {
+      setLoading(false);
+      setAuthLoading(null);
     }
   }
 
@@ -497,6 +533,7 @@ export default function SignupPage() {
     }
 
     setLoading(true);
+    setAuthLoading("google");
 
     try {
       markBrowserSessionActive();
@@ -571,6 +608,7 @@ export default function SignupPage() {
       );
     } finally {
       setLoading(false);
+      setAuthLoading(null);
     }
   }
 
@@ -581,6 +619,7 @@ export default function SignupPage() {
     setError("");
 
     setLoading(true);
+    setAuthLoading("facebook");
 
     try {
       markBrowserSessionActive();
@@ -599,8 +638,9 @@ export default function SignupPage() {
           ? err.message
           : "Facebook sign-up failed. Please try again."
       );
-
+    } finally {
       setLoading(false);
+      setAuthLoading(null);
     }
   }
 
@@ -887,7 +927,7 @@ export default function SignupPage() {
                     onGoogle
                   }
                   disabled={
-                    loading ||
+                    authLoading !== null ||
                     !googleReady
                   }
                 >
@@ -934,7 +974,7 @@ export default function SignupPage() {
                     onFacebook
                   }
                   disabled={
-                    loading
+                    authLoading !== null
                   }
                 >
 
@@ -961,7 +1001,7 @@ export default function SignupPage() {
                     onRequestPremierAccess
                   }
                   disabled={
-                    loading
+                    authLoading !== null
                   }
                 >
 

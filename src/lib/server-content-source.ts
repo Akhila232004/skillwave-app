@@ -34,10 +34,88 @@ type GitHubContentEntry = {
   downloadUrl?: string | null;
 };
 
-const githubHeaders = {
+/*
+ * ============================================================
+ * GITHUB CONFIGURATION
+ * ============================================================
+ *
+ * GITHUB_TOKEN is intentionally read only on the server.
+ *
+ * Do NOT use NEXT_PUBLIC_GITHUB_TOKEN.
+ *
+ * The token should exist in .env.local:
+ *
+ *   GITHUB_TOKEN=github_pat_...
+ *
+ * It should never be committed to Git.
+ */
+
+const githubToken =
+  process.env.GITHUB_TOKEN?.trim() || "";
+
+/*
+ * GitHub API headers.
+ *
+ * The Authorization header is included only when a token
+ * exists. This keeps the application functional for public
+ * repositories even when authentication is not configured.
+ */
+const githubHeaders: HeadersInit = {
   "User-Agent": "SkillWave-App",
   Accept: "application/vnd.github+json",
+
+  ...(githubToken
+    ? {
+        Authorization:
+          `Bearer ${githubToken}`,
+      }
+    : {}),
 };
+
+/*
+ * ============================================================
+ * DIRECTORY CACHE
+ * ============================================================
+ *
+ * Directory discovery uses GitHub's REST Contents API.
+ *
+ * Without caching, every request to the interview page can
+ * cause another GitHub API request.
+ *
+ * This cache prevents repeated requests for the same:
+ *
+ *   repository + branch + directory
+ *
+ * combination.
+ *
+ * Cache duration:
+ *
+ *   5 minutes
+ *
+ * There is also an in-flight request cache. If several parts
+ * of the application ask for the same directory at the same
+ * time, only one GitHub request is made.
+ */
+
+const DIRECTORY_CACHE_TTL_MS =
+  5 * 60 * 1000;
+
+type DirectoryCacheEntry = {
+  expiresAt: number;
+  entries: GitHubContentEntry[];
+};
+
+const directoryCache =
+  new Map<
+    string,
+    DirectoryCacheEntry
+  >();
+
+const directoryInFlight =
+  new Map<
+    string,
+    Promise<GitHubContentEntry[]>
+  >();
 
 /*
  * ============================================================
@@ -53,7 +131,8 @@ const fetchGitHubText = async (
     headers: githubHeaders,
   });
 
-  const text = await response.text();
+  const text =
+    await response.text();
 
   if (!response.ok) {
     throw new Error(
@@ -160,7 +239,7 @@ export async function readRepoContentText(
     );
 
   return source.text;
-};
+}
 
 /*
  * ============================================================
@@ -170,18 +249,26 @@ export async function readRepoContentText(
  * raw.githubusercontent.com can serve individual files,
  * but it cannot list directory contents.
  *
- * Therefore, directory discovery uses the GitHub Contents API.
+ * Therefore directory discovery uses the GitHub Contents API.
  *
- * This is what makes the shell universal.
+ * This makes the shell universal because the shell does not
+ * need to know the names of individual interview files.
  *
- * The shell no longer assumes that a company has files such as:
+ * Example:
  *
- *   interview/java.md
- *   interview/python.md
- *   interview/ai.md
+ *   interview/
+ *     java.md
+ *     python.md
+ *     aws.md
  *
- * Instead, it asks GitHub what actually exists in the
- * configured directory.
+ * or another company's repository:
+ *
+ *   interview/
+ *     frontend.md
+ *     backend.md
+ *     devops.md
+ *
+ * Both structures work automatically.
  */
 
 const buildGitHubContentsApiUrl = (
@@ -238,11 +325,31 @@ const buildGitHubContentsApiUrl = (
 
 /*
  * ============================================================
+ * DIRECTORY CACHE KEY
+ * ============================================================
+ */
+
+const buildDirectoryCacheKey = (
+  repoFolderPath: string,
+  repoName: string,
+  repoRef: string
+) =>
+  [
+    CONTENT_REPO_OWNER,
+    repoName,
+    repoRef,
+    normalizeContentRepoPath(
+      repoFolderPath
+    ),
+  ].join(":");
+
+/*
+ * ============================================================
  * GITHUB DIRECTORY FETCH
  * ============================================================
  */
 
-const fetchGitHubDirectory =
+const fetchGitHubDirectoryUncached =
   async (
     repoFolderPath: string,
     repoName: string,
@@ -273,6 +380,84 @@ const fetchGitHubDirectory =
       await response.text();
 
     if (!response.ok) {
+      if (
+        response.status ===
+          401 ||
+        response.status ===
+          403
+      ) {
+        const rateLimitRemaining =
+          response.headers.get(
+            "x-ratelimit-remaining"
+          );
+
+        const rateLimitReset =
+          response.headers.get(
+            "x-ratelimit-reset"
+          );
+
+        let message =
+          `GitHub directory request failed (${response.status}).`;
+
+        if (
+          response.status ===
+          401
+        ) {
+          message +=
+            " GitHub authentication failed. Check GITHUB_TOKEN in .env.local.";
+        }
+
+        if (
+          response.status ===
+          403
+        ) {
+          message +=
+            " GitHub denied the request or the API rate limit was exceeded.";
+
+          if (
+            rateLimitRemaining ===
+            "0"
+          ) {
+            message +=
+              " The GitHub API rate limit is exhausted.";
+          }
+
+          if (
+            rateLimitReset
+          ) {
+            const resetDate =
+              new Date(
+                Number(
+                  rateLimitReset
+                ) * 1000
+              );
+
+            if (
+              !Number.isNaN(
+                resetDate.getTime()
+              )
+            ) {
+              message +=
+                ` Rate-limit reset: ${resetDate.toISOString()}.`;
+            }
+          }
+
+          if (
+            !githubToken
+          ) {
+            message +=
+              " No GITHUB_TOKEN is configured.";
+          }
+        }
+
+        message +=
+          ` Response: ${text}`;
+
+        throw new Error(
+          message
+        );
+      }
+
       throw new Error(
         `GitHub directory request failed (${response.status}): ${text}`
       );
@@ -289,7 +474,11 @@ const fetchGitHubDirectory =
       );
     }
 
-    if (!Array.isArray(parsed)) {
+    if (
+      !Array.isArray(
+        parsed
+      )
+    ) {
       throw new Error(
         "GitHub directory response did not contain a directory listing"
       );
@@ -300,28 +489,123 @@ const fetchGitHubDirectory =
 
 /*
  * ============================================================
+ * CACHED GITHUB DIRECTORY FETCH
+ * ============================================================
+ *
+ * This wrapper provides:
+ *
+ *   1. normal cache hits
+ *   2. in-flight request deduplication
+ *   3. automatic expiration
+ */
+
+const fetchGitHubDirectory =
+  async (
+    repoFolderPath: string,
+    repoName: string,
+    repoRef: string
+  ): Promise<
+    GitHubContentEntry[]
+  > => {
+    const cacheKey =
+      buildDirectoryCacheKey(
+        repoFolderPath,
+        repoName,
+        repoRef
+      );
+
+    const now =
+      Date.now();
+
+    const cached =
+      directoryCache.get(
+        cacheKey
+      );
+
+    if (
+      cached &&
+      cached.expiresAt > now
+    ) {
+      console.log(
+        "SKILLWAVE GITHUB DIRECTORY CACHE HIT:",
+        normalizeContentRepoPath(
+          repoFolderPath
+        )
+      );
+
+      return cached.entries;
+    }
+
+    if (cached) {
+      directoryCache.delete(
+        cacheKey
+      );
+    }
+
+    const existingRequest =
+      directoryInFlight.get(
+        cacheKey
+      );
+
+    if (
+      existingRequest
+    ) {
+      console.log(
+        "SKILLWAVE GITHUB DIRECTORY REQUEST REUSED:",
+        normalizeContentRepoPath(
+          repoFolderPath
+        )
+      );
+
+      return existingRequest;
+    }
+
+    const request =
+      fetchGitHubDirectoryUncached(
+        repoFolderPath,
+        repoName,
+        repoRef
+      )
+        .then(
+          (entries) => {
+            directoryCache.set(
+              cacheKey,
+              {
+                entries,
+                expiresAt:
+                  Date.now() +
+                  DIRECTORY_CACHE_TTL_MS,
+              }
+            );
+
+            return entries;
+          }
+        )
+        .finally(
+          () => {
+            directoryInFlight.delete(
+              cacheKey
+            );
+          }
+        );
+
+    directoryInFlight.set(
+      cacheKey,
+      request
+    );
+
+    return request;
+  };
+
+/*
+ * ============================================================
  * REPOSITORY DIRECTORY
  * ============================================================
  *
- * This function is now completely generic.
+ * This function is completely generic.
  *
- * Example:
- *
- * If config says:
- *
- *   contentPaths.interview = "interview"
- *
- * and the repository contains:
- *
- *   interview/
- *     frontend.md
- *     backend.md
- *     devops.md
- *
- * those files are automatically discovered.
- *
- * Another company can have a completely different structure
- * inside its configured interview directory.
+ * It discovers files from whatever directory is supplied by
+ * the caller.
  */
 
 export async function readRepoDirectory(
@@ -356,7 +640,8 @@ export async function readRepoDirectory(
       repoRef
     );
 
-  const entries: RepoDirectoryEntry[] =
+  const entries:
+    RepoDirectoryEntry[] =
     githubEntries
       .filter(
         (entry) =>
@@ -413,9 +698,11 @@ export async function readContentRepoStatus(): Promise<ContentRepoStatus> {
     source:
       getContentRepoDisplayName(),
 
-    updatedAt: null,
+    updatedAt:
+      null,
 
-    commitSha: null,
+    commitSha:
+      null,
   };
 }
 
@@ -424,16 +711,16 @@ export async function readContentRepoStatus(): Promise<ContentRepoStatus> {
  * CONTENT REPOSITORY REACHABILITY
  * ============================================================
  *
- * IMPORTANT:
- *
- * The previous implementation tested:
+ * The previous implementation tested a hardcoded file such as:
  *
  *   interview/ai.md
  *
  * That made the shell dependent on a Tinitiate-specific file.
  *
- * We now test the repository itself using the GitHub Contents
- * API and the configured content paths.
+ * We now test the configured directory instead.
+ *
+ * The directory result is cached, so repeated connectivity
+ * checks will not continuously consume GitHub API requests.
  */
 
 export async function checkContentRepoReachability() {
@@ -444,11 +731,12 @@ export async function checkContentRepoReachability() {
         .interview;
 
     /*
-     * If the interview feature is enabled, test the configured
-     * interview directory.
+     * If interview is enabled, test the configured interview
+     * directory.
      */
     if (
-      skillwaveConfig.features
+      skillwaveConfig
+        .features
         .interview &&
       interviewPath
     ) {
@@ -471,7 +759,8 @@ export async function checkContentRepoReachability() {
         .courses;
 
     if (
-      skillwaveConfig.features
+      skillwaveConfig
+        .features
         .courses &&
       coursesPath
     ) {

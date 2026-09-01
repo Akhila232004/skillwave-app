@@ -1,5 +1,3 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -57,6 +55,23 @@ import {
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
+
+type RepositoryBrandingConfig = {
+  company?: {
+    name?: string;
+    shortName?: string;
+    branding?: {
+      logo?: string;
+      logoLight?: string;
+      logoMark?: string;
+    };
+  };
+  repository?: {
+    owner?: string;
+    repository?: string;
+    branch?: string;
+  };
 };
 
 type SectionCard = {
@@ -358,6 +373,51 @@ export default function Dashboard() {
   const [installInstalled, setInstallInstalled] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const hasLoadedStatusRef = useRef(false);
+  const [repositoryConfig, setRepositoryConfig] =
+    useState<RepositoryBrandingConfig | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRepositoryConfig = async () => {
+      try {
+        const response = await fetch("/api/content/config", {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-store",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to load repository configuration (${response.status})`
+          );
+        }
+
+        const config =
+          (await response.json()) as RepositoryBrandingConfig;
+
+        if (!cancelled) {
+          setRepositoryConfig(config);
+        }
+      } catch (error) {
+        console.error(
+          "SKILLWAVE COMPANY CONFIG LOAD FAILED:",
+          error
+        );
+
+        if (!cancelled) {
+          setRepositoryConfig(null);
+        }
+      }
+    };
+
+    void loadRepositoryConfig();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -579,7 +639,41 @@ export default function Dashboard() {
     setInstallPrompt(null);
   };
 
-  const logoSrc = theme === "dark" ? "/TinitiateLogo.png" : "/TinitiateLogoLight.png";
+  const repositoryOwner = repositoryConfig?.repository?.owner;
+  const repositoryName = repositoryConfig?.repository?.repository;
+  const repositoryBranch = repositoryConfig?.repository?.branch || "main";
+
+  const configuredLogo =
+    theme === "dark"
+      ? repositoryConfig?.company?.branding?.logo
+      : repositoryConfig?.company?.branding?.logoLight;
+
+  const fallbackConfiguredLogo =
+    theme === "dark"
+      ? repositoryConfig?.company?.branding?.logoLight
+      : repositoryConfig?.company?.branding?.logo;
+
+  const buildBrandingUrl = (brandingPath?: string) => {
+    if (!brandingPath || !repositoryOwner || !repositoryName) {
+      return null;
+    }
+
+    const cleanPath = brandingPath.replace(/^\/+/, "");
+
+    return `/api/proxy?url=${encodeURIComponent(
+      `https://raw.githubusercontent.com/${repositoryOwner}/${repositoryName}/${repositoryBranch}/${cleanPath}`
+    )}`;
+  };
+
+  const logoSrc =
+    buildBrandingUrl(configuredLogo) ||
+    buildBrandingUrl(fallbackConfiguredLogo) ||
+    "";
+
+  const companyName =
+    repositoryConfig?.company?.name ||
+    repositoryConfig?.company?.shortName ||
+    "SkillWave";
   const firstName =
     session?.user?.name?.trim().split(/\s+/)[0] || session?.user?.email?.split("@")[0] || "Learner";
   const accountInitial = firstName.charAt(0).toUpperCase() || "L";
@@ -878,13 +972,36 @@ export default function Dashboard() {
         >
           <div className="page-hero-top" style={{ gap: 16 }}>
             <div className="page-hero-brand" style={{ gap: 18 }}>
-              <Image
-                src={logoSrc}
-                alt="Tinitiate"
-                width={1720}
-                height={181}
-                style={{ width: 190, maxWidth: "46vw", height: "auto", objectFit: "contain" }}
-              />
+              {logoSrc ? (
+  <Image
+    src={logoSrc}
+    alt={companyName}
+    width={1720}
+    height={181}
+    style={{
+      width: 190,
+      maxWidth: "46vw",
+      height: "auto",
+      objectFit: "contain",
+    }}
+  />
+) : (
+  <div
+    aria-label={companyName}
+    style={{
+      width: 190,
+      maxWidth: "46vw",
+      minHeight: 44,
+      display: "flex",
+      alignItems: "center",
+      fontSize: 24,
+      fontWeight: 800,
+      color: "var(--text)",
+    }}
+  >
+    {companyName}
+  </div>
+)}
 
               <div className="page-hero-copy">
                 <div

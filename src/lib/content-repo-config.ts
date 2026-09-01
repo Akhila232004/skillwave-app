@@ -1,50 +1,76 @@
-import { skillwaveConfig } from "../config/skillwave.config";
-
 /*
  * ============================================================
  * CONTENT REPOSITORY CONFIGURATION
  * ============================================================
  *
  * This file provides one common interface for accessing the
- * content repository used by the application.
+ * content repository used by the SkillWave universal shell.
  *
- * The actual company/repository information comes from:
+ * IMPORTANT:
  *
- *   src/config/skillwave.config.ts
+ * The shell itself must not contain company-specific
+ * application configuration.
  *
- * This means the application code does not need to know which
- * company owns the content repository.
+ * The repository connection is supplied through environment
+ * variables.
  *
- * Environment variables can still override the configuration
- * when required.
+ * The connected repository then provides:
+ *
+ *   skillwave.config.yaml
+ *
+ * which contains:
+ *
+ *   company
+ *   content
+ *   design
+ *
+ * Example:
+ *
+ *   CONTENT_REPO_OWNER=Akhila232004
+ *   CONTENT_REPO_NAME=tinitiateai-skillwave
+ *   CONTENT_REPO_BRANCH=main
+ *
+ * For another company, only the repository connection needs
+ * to change.
  */
 
-/* ============================================================
-   HELPERS
-============================================================ */
+/*
+ * ============================================================
+ * HELPERS
+ * ============================================================
+ */
 
-const trimSlashes = (value: string) =>
+const trimSlashes = (
+  value: string
+) =>
   String(value || "")
     .replace(/\\/g, "/")
     .replace(/^\/+|\/+$/g, "");
 
-const splitUrlPath = (value: string) =>
+const splitUrlPath = (
+  value: string
+) =>
   trimSlashes(
-    String(value || "").split(/[?#]/)[0]
+    String(value || "")
+      .split(/[?#]/)[0]
   )
     .split("/")
     .filter(Boolean);
 
-const normalizeRepoName = (value: string) => {
-  const normalized = trimSlashes(value);
+const normalizeRepoName = (
+  value: string
+) => {
+  const normalized =
+    trimSlashes(value);
 
   if (!normalized) {
     return "";
   }
 
-  const parts = normalized
-    .split("/")
-    .filter(Boolean);
+  const parts =
+    normalized
+      .split("/")
+      .filter(Boolean);
 
   /*
    * Accept either:
@@ -57,72 +83,83 @@ const normalizeRepoName = (value: string) => {
    *
    * Internally we only need the repository name.
    */
+
   return parts.length > 1
     ? parts[parts.length - 1]
     : parts[0];
 };
 
-/* ============================================================
-   REPOSITORY SETTINGS
-============================================================ */
-
 /*
- * Repository owner.
+ * ============================================================
+ * REPOSITORY SETTINGS
+ * ============================================================
+ *
+ * These values identify the repository containing the
+ * company's SkillWave content.
+ *
+ * They are deployment-level settings.
+ *
+ * They are NOT company branding configuration.
  *
  * Priority:
  *
- * 1. NEXT_PUBLIC_CONTENT_REPO_OWNER
- * 2. CONTENT_REPO_OWNER
- * 3. skillwave.config.ts
+ *   1. NEXT_PUBLIC_CONTENT_REPO_OWNER
+ *   2. CONTENT_REPO_OWNER
+ *
+ * The NEXT_PUBLIC variants are retained for compatibility
+ * with existing frontend code.
+ *
+ * No fallback to skillwave.config.ts is used anymore.
  */
+
 export const CONTENT_REPO_OWNER =
-  process.env.NEXT_PUBLIC_CONTENT_REPO_OWNER ||
-  process.env.CONTENT_REPO_OWNER ||
-  skillwaveConfig.contentRepository.owner;
+  (
+    process.env.NEXT_PUBLIC_CONTENT_REPO_OWNER ||
+    process.env.CONTENT_REPO_OWNER ||
+    ""
+  ).trim();
 
 /*
  * Repository name.
- *
- * Priority:
- *
- * 1. NEXT_PUBLIC_CONTENT_REPO_NAME
- * 2. CONTENT_REPO_NAME
- * 3. skillwave.config.ts
  */
+
 export const CONTENT_REPO_NAME =
   normalizeRepoName(
     process.env.NEXT_PUBLIC_CONTENT_REPO_NAME ||
       process.env.CONTENT_REPO_NAME ||
-      skillwaveConfig.contentRepository.repository
+      ""
   );
 
 /*
  * Repository branch.
- *
- * Priority:
- *
- * 1. NEXT_PUBLIC_CONTENT_REPO_BRANCH
- * 2. CONTENT_REPO_BRANCH
- * 3. skillwave.config.ts
  */
+
 export const CONTENT_REPO_BRANCH =
-  process.env.NEXT_PUBLIC_CONTENT_REPO_BRANCH ||
-  process.env.CONTENT_REPO_BRANCH ||
-  skillwaveConfig.contentRepository.branch;
+  (
+    process.env.NEXT_PUBLIC_CONTENT_REPO_BRANCH ||
+    process.env.CONTENT_REPO_BRANCH ||
+    "main"
+  ).trim();
 
 /*
- * Optional base path inside the repository.
+ * ============================================================
+ * OPTIONAL BASE PATH
+ * ============================================================
+ *
+ * This allows a company repository to keep SkillWave content
+ * inside a subdirectory.
  *
  * Example:
  *
- * repository/
- *   learning-content/
- *     courses/
+ *   repository/
+ *     learning-content/
+ *       courses/
  *
  * Then:
  *
- * CONTENT_REPO_BASE_PATH=learning-content
+ *   CONTENT_REPO_BASE_PATH=learning-content
  */
+
 export const CONTENT_REPO_BASE_PATH =
   trimSlashes(
     process.env.NEXT_PUBLIC_CONTENT_REPO_BASE_PATH ||
@@ -130,21 +167,65 @@ export const CONTENT_REPO_BASE_PATH =
       ""
   );
 
-/* ============================================================
-   PATH NORMALIZATION
-============================================================ */
+/*
+ * ============================================================
+ * CONFIGURATION VALIDATION
+ * ============================================================
+ */
+
+export const hasContentRepositoryConfiguration =
+  Boolean(
+    CONTENT_REPO_OWNER &&
+      CONTENT_REPO_NAME &&
+      CONTENT_REPO_BRANCH
+  );
+
+export const assertContentRepositoryConfiguration =
+  () => {
+    if (!CONTENT_REPO_OWNER) {
+      throw new Error(
+        "Content repository owner is not configured. " +
+          "Set CONTENT_REPO_OWNER in .env.local."
+      );
+    }
+
+    if (!CONTENT_REPO_NAME) {
+      throw new Error(
+        "Content repository name is not configured. " +
+          "Set CONTENT_REPO_NAME in .env.local."
+      );
+    }
+
+    if (!CONTENT_REPO_BRANCH) {
+      throw new Error(
+        "Content repository branch is not configured. " +
+          "Set CONTENT_REPO_BRANCH in .env.local."
+      );
+    }
+  };
+
+/*
+ * ============================================================
+ * PATH NORMALIZATION
+ * ============================================================
+ */
 
 export const normalizeContentRepoPath = (
   filePath: string
-) => trimSlashes(filePath);
+) =>
+  trimSlashes(filePath);
 
 export const stripContentRepoBasePath = (
   filePath: string
 ) => {
   const normalized =
-    normalizeContentRepoPath(filePath);
+    normalizeContentRepoPath(
+      filePath
+    );
 
-  if (!CONTENT_REPO_BASE_PATH) {
+  if (
+    !CONTENT_REPO_BASE_PATH
+  ) {
     return normalized;
   }
 
@@ -180,9 +261,11 @@ export const resolveContentRepoPath = (
     .join("/");
 };
 
-/* ============================================================
-   PATH CANDIDATES
-============================================================ */
+/*
+ * ============================================================
+ * PATH CANDIDATES
+ * ============================================================
+ */
 
 export const getContentRepoPathCandidates = (
   filePath: string
@@ -202,13 +285,17 @@ export const getContentRepoPathCandidates = (
   ].filter(Boolean);
 
   return [
-    ...new Set(candidates),
+    ...new Set(
+      candidates
+    ),
   ];
 };
 
-/* ============================================================
-   REPOSITORY NAME CANDIDATES
-============================================================ */
+/*
+ * ============================================================
+ * REPOSITORY NAME CANDIDATES
+ * ============================================================
+ */
 
 export const getContentRepoNameCandidates = (
   preferredRepoName?: string
@@ -225,9 +312,11 @@ export const getContentRepoNameCandidates = (
     : [];
 };
 
-/* ============================================================
-   RAW GITHUB URL
-============================================================ */
+/*
+ * ============================================================
+ * RAW GITHUB URL
+ * ============================================================
+ */
 
 export const buildContentRepoRawUrl = (
   filePath: string,
@@ -235,15 +324,15 @@ export const buildContentRepoRawUrl = (
   repoRef = CONTENT_REPO_BRANCH
 ) => {
   const normalizedRepoName =
-    normalizeRepoName(repoName);
-
-  if (!CONTENT_REPO_OWNER) {
-    throw new Error(
-      "Content repository owner is not configured"
+    normalizeRepoName(
+      repoName
     );
-  }
 
-  if (!normalizedRepoName) {
+  assertContentRepositoryConfiguration();
+
+  if (
+    !normalizedRepoName
+  ) {
     throw new Error(
       "Content repository name is not configured"
     );
@@ -270,42 +359,38 @@ export const buildContentRepoRawUrl = (
     `https://raw.githubusercontent.com/` +
     `${CONTENT_REPO_OWNER}/` +
     `${normalizedRepoName}/` +
-    `${repoRef}/` +
+    `${encodeURIComponent(repoRef)}/` +
     `${resolvedPath}`
   );
 };
 
-/* ============================================================
-   GITHUB BLOB URL
-============================================================ */
+/*
+ * ============================================================
+ * GITHUB BLOB URL
+ * ============================================================
+ */
 
 export const buildContentRepoBlobUrl = (
   filePath: string,
   repoName = CONTENT_REPO_NAME
 ) => {
   const normalizedRepoName =
-    normalizeRepoName(repoName);
+    normalizeRepoName(
+      repoName
+    );
 
   const resolvedPath =
     resolveContentRepoPath(
       filePath
     );
 
-  if (!normalizedRepoName) {
+  assertContentRepositoryConfiguration();
+
+  if (
+    !normalizedRepoName
+  ) {
     throw new Error(
       "Content repository name is not configured"
-    );
-  }
-
-  if (!CONTENT_REPO_OWNER) {
-    throw new Error(
-      "Content repository owner is not configured"
-    );
-  }
-
-  if (!CONTENT_REPO_BRANCH) {
-    throw new Error(
-      "Content repository branch is not configured"
     );
   }
 
@@ -318,37 +403,33 @@ export const buildContentRepoBlobUrl = (
   );
 };
 
-/* ============================================================
-   GITHUB TREE URL
-============================================================ */
+/*
+ * ============================================================
+ * GITHUB TREE URL
+ * ============================================================
+ */
 
 export const buildContentRepoTreeUrl = (
   folderPath = "",
   repoName = CONTENT_REPO_NAME
 ) => {
   const normalizedRepoName =
-    normalizeRepoName(repoName);
+    normalizeRepoName(
+      repoName
+    );
 
   const resolvedPath =
     resolveContentRepoPath(
       folderPath
     );
 
-  if (!normalizedRepoName) {
+  assertContentRepositoryConfiguration();
+
+  if (
+    !normalizedRepoName
+  ) {
     throw new Error(
       "Content repository name is not configured"
-    );
-  }
-
-  if (!CONTENT_REPO_OWNER) {
-    throw new Error(
-      "Content repository owner is not configured"
-    );
-  }
-
-  if (!CONTENT_REPO_BRANCH) {
-    throw new Error(
-      "Content repository branch is not configured"
     );
   }
 
@@ -363,9 +444,11 @@ export const buildContentRepoTreeUrl = (
     : baseUrl;
 };
 
-/* ============================================================
-   DISPLAY NAME
-============================================================ */
+/*
+ * ============================================================
+ * DISPLAY NAME
+ * ============================================================
+ */
 
 export const getContentRepoDisplayName =
   () =>
@@ -377,9 +460,11 @@ export const getContentRepoDisplayName =
       .filter(Boolean)
       .join("/");
 
-/* ============================================================
-   PARSE CONTENT REPOSITORY PATH FROM URL
-============================================================ */
+/*
+ * ============================================================
+ * PARSE CONTENT REPOSITORY PATH FROM URL
+ * ============================================================
+ */
 
 export const parseContentRepoPathFromUrl = (
   urlString: string
@@ -406,6 +491,7 @@ export const parseContentRepoPathFromUrl = (
      * OWNER/REPOSITORY/BRANCH/PATH
      * --------------------------------------------------------
      */
+
     if (
       url.hostname ===
         "raw.githubusercontent.com" &&
@@ -432,6 +518,7 @@ export const parseContentRepoPathFromUrl = (
      * OWNER/REPOSITORY/blob/BRANCH/PATH
      * --------------------------------------------------------
      */
+
     if (
       url.hostname ===
         "github.com" &&
@@ -440,7 +527,8 @@ export const parseContentRepoPathFromUrl = (
       repoNameCandidates.has(
         parts[1]
       ) &&
-      parts[2] === "blob" &&
+      parts[2] ===
+        "blob" &&
       parts[3] ===
         CONTENT_REPO_BRANCH
     ) {

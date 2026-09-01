@@ -11,8 +11,6 @@ import {
   resolveContentRepoPath,
 } from "./content-repo-config";
 
-import { skillwaveConfig } from "../config/skillwave.config";
-
 export type RepoContentSource = {
   repoName: string;
   text: string;
@@ -54,20 +52,18 @@ const githubToken =
   process.env.GITHUB_TOKEN?.trim() || "";
 
 /*
- * GitHub API headers.
- *
- * The Authorization header is included only when a token
- * exists. This keeps the application functional for public
- * repositories even when authentication is not configured.
+ * ============================================================
+ * GITHUB API HEADERS
+ * ============================================================
  */
+
 const githubHeaders: HeadersInit = {
   "User-Agent": "SkillWave-App",
   Accept: "application/vnd.github+json",
 
   ...(githubToken
     ? {
-        Authorization:
-          `Bearer ${githubToken}`,
+        Authorization: `Bearer ${githubToken}`,
       }
     : {}),
 };
@@ -77,24 +73,18 @@ const githubHeaders: HeadersInit = {
  * DIRECTORY CACHE
  * ============================================================
  *
- * Directory discovery uses GitHub's REST Contents API.
+ * GitHub directory discovery uses the REST Contents API.
  *
- * Without caching, every request to the interview page can
- * cause another GitHub API request.
- *
- * This cache prevents repeated requests for the same:
- *
- *   repository + branch + directory
- *
- * combination.
+ * Without caching, repeated requests can quickly consume
+ * the GitHub API rate limit.
  *
  * Cache duration:
  *
  *   5 minutes
  *
- * There is also an in-flight request cache. If several parts
- * of the application ask for the same directory at the same
- * time, only one GitHub request is made.
+ * There is also an in-flight request cache so multiple
+ * simultaneous requests for the same directory reuse
+ * one GitHub request.
  */
 
 const DIRECTORY_CACHE_TTL_MS =
@@ -106,16 +96,372 @@ type DirectoryCacheEntry = {
 };
 
 const directoryCache =
-  new Map<
-    string,
-    DirectoryCacheEntry
-  >();
+  new Map<string, DirectoryCacheEntry>();
 
 const directoryInFlight =
   new Map<
     string,
     Promise<GitHubContentEntry[]>
   >();
+
+/*
+ * ============================================================
+ * REPOSITORY CONFIGURATION CACHE
+ * ============================================================
+ *
+ * The company repository contains:
+ *
+ *   skillwave.config.yaml
+ *
+ * This file describes:
+ *
+ *   company
+ *   content
+ *   design
+ *
+ * The universal shell reads that configuration instead of
+ * storing company-specific branding information inside the
+ * shell application.
+ *
+ * The configuration is cached for the same reason as directory
+ * listings: we do not want every page request to call GitHub.
+ */
+
+const REPOSITORY_CONFIG_PATH =
+  "skillwave.config.yaml";
+
+const REPOSITORY_CONFIG_CACHE_TTL_MS =
+  5 * 60 * 1000;
+
+type RepositoryConfigCacheEntry = {
+  expiresAt: number;
+  config: SkillWaveRepositoryConfig;
+};
+
+const repositoryConfigCache =
+  new Map<
+    string,
+    RepositoryConfigCacheEntry
+  >();
+
+const repositoryConfigInFlight =
+  new Map<
+    string,
+    Promise<SkillWaveRepositoryConfig>
+  >();
+
+/*
+ * ============================================================
+ * REPOSITORY CONFIGURATION TYPES
+ * ============================================================
+ *
+ * These types describe the configuration contract supplied by
+ * a company content repository.
+ */
+
+export type SkillWaveRepositoryBranding = {
+  logo?: string;
+  logoLight?: string;
+  logoMark?: string;
+};
+
+export type SkillWaveRepositorySocial = {
+  linkedin?: string;
+  x?: string;
+  instagram?: string;
+  facebook?: string;
+  youtube?: string;
+};
+
+export type SkillWaveRepositoryCompany = {
+  name?: string;
+  legalName?: string;
+  shortName?: string;
+  description?: string;
+  website?: string;
+  contactEmail?: string;
+
+  branding?: SkillWaveRepositoryBranding;
+
+  social?: SkillWaveRepositorySocial;
+};
+
+export type SkillWaveRepositoryContentItem = {
+  enabled?: boolean;
+  path?: string;
+};
+
+export type SkillWaveRepositoryContent = {
+  interview?: SkillWaveRepositoryContentItem;
+  courses?: SkillWaveRepositoryContentItem;
+  slideshow?: SkillWaveRepositoryContentItem;
+  videos?: SkillWaveRepositoryContentItem;
+  audio?: SkillWaveRepositoryContentItem;
+  cbt?: SkillWaveRepositoryContentItem;
+  dashboard?: SkillWaveRepositoryContentItem;
+  ticker?: SkillWaveRepositoryContentItem;
+
+  [key: string]:
+    | SkillWaveRepositoryContentItem
+    | undefined;
+};
+
+export type SkillWaveRepositoryDesign = {
+  enabled?: boolean;
+  colour?: string;
+  icons?: string;
+};
+
+export type SkillWaveRepositoryConfig = {
+  name?: string;
+  version?: number;
+
+  company?: SkillWaveRepositoryCompany;
+
+  content?: SkillWaveRepositoryContent;
+
+  design?: SkillWaveRepositoryDesign;
+};
+
+/*
+ * ============================================================
+ * BASIC YAML PARSER
+ * ============================================================
+ *
+ * The repository configuration is intentionally simple YAML.
+ *
+ * We parse the configuration here without introducing a new
+ * runtime dependency.
+ *
+ * Supported structure:
+ *
+ *   key: value
+ *
+ *   parent:
+ *     child: value
+ *
+ *   parent:
+ *     child:
+ *       grandChild: value
+ *
+ * Arrays are not required by the current SkillWave
+ * configuration contract.
+ */
+
+const stripYamlComment = (
+  value: string
+): string => {
+  let insideSingleQuote = false;
+  let insideDoubleQuote = false;
+
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+
+    if (
+      character === "'" &&
+      !insideDoubleQuote
+    ) {
+      insideSingleQuote =
+        !insideSingleQuote;
+      continue;
+    }
+
+    if (
+      character === '"' &&
+      !insideSingleQuote
+    ) {
+      insideDoubleQuote =
+        !insideDoubleQuote;
+      continue;
+    }
+
+    if (
+      character === "#" &&
+      !insideSingleQuote &&
+      !insideDoubleQuote
+    ) {
+      return value
+        .slice(0, index)
+        .trimEnd();
+    }
+  }
+
+  return value.trimEnd();
+};
+
+const parseYamlScalar = (
+  rawValue: string
+): unknown => {
+  const value =
+    stripYamlComment(rawValue).trim();
+
+  if (!value) {
+    return {};
+  }
+
+  if (
+    value.startsWith('"') &&
+    value.endsWith('"')
+  ) {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value.slice(1, -1);
+    }
+  }
+
+  if (
+    value.startsWith("'") &&
+    value.endsWith("'")
+  ) {
+    return value.slice(1, -1);
+  }
+
+  if (value === "true") {
+    return true;
+  }
+
+  if (value === "false") {
+    return false;
+  }
+
+  if (
+    value === "null" ||
+    value === "~"
+  ) {
+    return null;
+  }
+
+  if (
+    /^-?\d+$/.test(value)
+  ) {
+    return Number(value);
+  }
+
+  if (
+    /^-?\d+\.\d+$/.test(value)
+  ) {
+    return Number(value);
+  }
+
+  return value;
+};
+
+const parseSimpleYaml = (
+  text: string
+): SkillWaveRepositoryConfig => {
+  const root: Record<
+    string,
+    unknown
+  > = {};
+
+  const stack: Array<{
+    indent: number;
+    object: Record<string, unknown>;
+  }> = [
+    {
+      indent: -1,
+      object: root,
+    },
+  ];
+
+  const lines =
+    text.replace(/\r\n/g, "\n")
+      .split("\n");
+
+  for (
+    let lineNumber = 0;
+    lineNumber < lines.length;
+    lineNumber += 1
+  ) {
+    const originalLine =
+      lines[lineNumber];
+
+    if (!originalLine.trim()) {
+      continue;
+    }
+
+    if (
+      originalLine.trimStart().startsWith("#")
+    ) {
+      continue;
+    }
+
+    const leadingWhitespace =
+      originalLine.match(/^\s*/)?.[0]
+        .length || 0;
+
+    const content =
+      stripYamlComment(
+        originalLine.trim()
+      );
+
+    if (!content) {
+      continue;
+    }
+
+    if (content.startsWith("- ")) {
+      throw new Error(
+        `Unsupported YAML array at line ${
+          lineNumber + 1
+        }.`
+      );
+    }
+
+    const separatorIndex =
+      content.indexOf(":");
+
+    if (separatorIndex <= 0) {
+      throw new Error(
+        `Invalid YAML configuration at line ${
+          lineNumber + 1
+        }: ${originalLine}`
+      );
+    }
+
+    const key =
+      content
+        .slice(0, separatorIndex)
+        .trim();
+
+    const rawValue =
+      content
+        .slice(separatorIndex + 1)
+        .trim();
+
+    while (
+      stack.length > 1 &&
+      leadingWhitespace <=
+        stack[stack.length - 1].indent
+    ) {
+      stack.pop();
+    }
+
+    const current =
+      stack[stack.length - 1].object;
+
+    if (!rawValue) {
+      const child: Record<
+        string,
+        unknown
+      > = {};
+
+      current[key] = child;
+
+      stack.push({
+        indent: leadingWhitespace,
+        object: child,
+      });
+
+      continue;
+    }
+
+    current[key] =
+      parseYamlScalar(rawValue);
+  }
+
+  return root as SkillWaveRepositoryConfig;
+};
 
 /*
  * ============================================================
@@ -145,20 +491,189 @@ const fetchGitHubText = async (
 
 /*
  * ============================================================
+ * REPOSITORY CONFIGURATION
+ * ============================================================
+ *
+ * Read skillwave.config.yaml from the configured company
+ * repository.
+ */
+
+const getRepositoryConfigCacheKey = (
+  repoName: string,
+  repoRef: string
+) =>
+  [
+    CONTENT_REPO_OWNER,
+    repoName,
+    repoRef,
+    REPOSITORY_CONFIG_PATH,
+  ].join(":");
+
+const fetchRepositoryConfigUncached =
+  async (
+    repoName: string,
+    repoRef: string
+  ): Promise<SkillWaveRepositoryConfig> => {
+    const rawUrl =
+      buildContentRepoRawUrl(
+        REPOSITORY_CONFIG_PATH,
+        repoName,
+        repoRef
+      );
+
+    console.log(
+      "SKILLWAVE REPOSITORY CONFIG:",
+      rawUrl
+    );
+
+    const text =
+      await fetchGitHubText(rawUrl);
+
+    const config =
+      parseSimpleYaml(text);
+
+    return config;
+  };
+
+export async function readRepositoryConfig(
+  preferredRepoName?: string,
+  repoRef = CONTENT_REPO_BRANCH
+): Promise<SkillWaveRepositoryConfig> {
+  const repoName =
+    getContentRepoNameCandidates(
+      preferredRepoName
+    )[0] ||
+    CONTENT_REPO_NAME;
+
+  const cacheKey =
+    getRepositoryConfigCacheKey(
+      repoName,
+      repoRef
+    );
+
+  const now = Date.now();
+
+  const cached =
+    repositoryConfigCache.get(
+      cacheKey
+    );
+
+  if (
+    cached &&
+    cached.expiresAt > now
+  ) {
+    console.log(
+      "SKILLWAVE REPOSITORY CONFIG CACHE HIT"
+    );
+
+    return cached.config;
+  }
+
+  if (cached) {
+    repositoryConfigCache.delete(
+      cacheKey
+    );
+  }
+
+  const existingRequest =
+    repositoryConfigInFlight.get(
+      cacheKey
+    );
+
+  if (existingRequest) {
+    console.log(
+      "SKILLWAVE REPOSITORY CONFIG REQUEST REUSED"
+    );
+
+    return existingRequest;
+  }
+
+  const request =
+    fetchRepositoryConfigUncached(
+      repoName,
+      repoRef
+    )
+      .then((config) => {
+        repositoryConfigCache.set(
+          cacheKey,
+          {
+            config,
+            expiresAt:
+              Date.now() +
+              REPOSITORY_CONFIG_CACHE_TTL_MS,
+          }
+        );
+
+        return config;
+      })
+      .finally(() => {
+        repositoryConfigInFlight.delete(
+          cacheKey
+        );
+      });
+
+  repositoryConfigInFlight.set(
+    cacheKey,
+    request
+  );
+
+  return request;
+}
+
+/*
+ * ============================================================
+ * REPOSITORY BRANDING URL
+ * ============================================================
+ *
+ * The company repository owns its branding files.
+ *
+ * Example:
+ *
+ *   branding/logo.png
+ *
+ * becomes:
+ *
+ *   https://raw.githubusercontent.com/
+ *   Akhila232004/tinitiateai-skillwave/
+ *   main/branding/logo.png
+ */
+
+export function buildRepositoryAssetUrl(
+  assetPath: string,
+  preferredRepoName?: string,
+  repoRef = CONTENT_REPO_BRANCH
+): string {
+  const normalizedPath =
+    normalizeContentRepoPath(
+      assetPath
+    );
+
+  if (!normalizedPath) {
+    throw new Error(
+      "Repository asset path is empty"
+    );
+  }
+
+  const repoName =
+    getContentRepoNameCandidates(
+      preferredRepoName
+    )[0] ||
+    CONTENT_REPO_NAME;
+
+  return buildContentRepoRawUrl(
+    normalizedPath,
+    repoName,
+    repoRef
+  );
+}
+
+/*
+ * ============================================================
  * REPOSITORY CONTENT
  * ============================================================
  *
  * Reads an individual file from the configured content
  * repository.
- *
- * The repository is determined by:
- *
- *   src/config/skillwave.config.ts
- *
- * or environment-variable overrides handled by
- * content-repo-config.ts.
- *
- * There are no company-specific repository names here.
  */
 
 export async function readRepoContentSource(
@@ -213,9 +728,7 @@ export async function readRepoContentSource(
   return {
     repoName:
       `${CONTENT_REPO_OWNER}/${repoName}`,
-
     text,
-
     url: rawUrl,
   };
 }
@@ -246,29 +759,13 @@ export async function readRepoContentText(
  * GITHUB DIRECTORY LISTING
  * ============================================================
  *
- * raw.githubusercontent.com can serve individual files,
- * but it cannot list directory contents.
+ * raw.githubusercontent.com can serve individual files, but
+ * it cannot list directory contents.
  *
- * Therefore directory discovery uses the GitHub Contents API.
+ * Directory discovery therefore uses GitHub's Contents API.
  *
- * This makes the shell universal because the shell does not
- * need to know the names of individual interview files.
- *
- * Example:
- *
- *   interview/
- *     java.md
- *     python.md
- *     aws.md
- *
- * or another company's repository:
- *
- *   interview/
- *     frontend.md
- *     backend.md
- *     devops.md
- *
- * Both structures work automatically.
+ * This allows any company to have different filenames inside
+ * its configured content directories.
  */
 
 const buildGitHubContentsApiUrl = (
@@ -475,9 +972,7 @@ const fetchGitHubDirectoryUncached =
     }
 
     if (
-      !Array.isArray(
-        parsed
-      )
+      !Array.isArray(parsed)
     ) {
       throw new Error(
         "GitHub directory response did not contain a directory listing"
@@ -491,12 +986,6 @@ const fetchGitHubDirectoryUncached =
  * ============================================================
  * CACHED GITHUB DIRECTORY FETCH
  * ============================================================
- *
- * This wrapper provides:
- *
- *   1. normal cache hits
- *   2. in-flight request deduplication
- *   3. automatic expiration
  */
 
 const fetchGitHubDirectory =
@@ -601,11 +1090,6 @@ const fetchGitHubDirectory =
  * ============================================================
  * REPOSITORY DIRECTORY
  * ============================================================
- *
- * This function is completely generic.
- *
- * It discovers files from whatever directory is supplied by
- * the caller.
  */
 
 export async function readRepoDirectory(
@@ -711,33 +1195,31 @@ export async function readContentRepoStatus(): Promise<ContentRepoStatus> {
  * CONTENT REPOSITORY REACHABILITY
  * ============================================================
  *
- * The previous implementation tested a hardcoded file such as:
+ * We test the configured interview directory when interview
+ * content is enabled.
  *
- *   interview/ai.md
+ * Otherwise we test courses.
  *
- * That made the shell dependent on a Tinitiate-specific file.
+ * Finally, if neither is configured, we test the repository
+ * root.
  *
- * We now test the configured directory instead.
- *
- * The directory result is cached, so repeated connectivity
- * checks will not continuously consume GitHub API requests.
+ * The directory result is cached.
  */
 
 export async function checkContentRepoReachability() {
   try {
-    const interviewPath =
-      skillwaveConfig
-        .contentPaths
-        .interview;
+    const config =
+      await readRepositoryConfig();
 
-    /*
-     * If interview is enabled, test the configured interview
-     * directory.
-     */
+    const interviewPath =
+      config.content
+        ?.interview
+        ?.path;
+
     if (
-      skillwaveConfig
-        .features
-        .interview &&
+      config.content
+        ?.interview
+        ?.enabled !== false &&
       interviewPath
     ) {
       await fetchGitHubDirectory(
@@ -749,19 +1231,15 @@ export async function checkContentRepoReachability() {
       return true;
     }
 
-    /*
-     * If interviews are disabled, test the configured courses
-     * directory instead.
-     */
     const coursesPath =
-      skillwaveConfig
-        .contentPaths
-        .courses;
+      config.content
+        ?.courses
+        ?.path;
 
     if (
-      skillwaveConfig
-        .features
-        .courses &&
+      config.content
+        ?.courses
+        ?.enabled !== false &&
       coursesPath
     ) {
       await fetchGitHubDirectory(
@@ -773,10 +1251,6 @@ export async function checkContentRepoReachability() {
       return true;
     }
 
-    /*
-     * If neither feature has a configured directory, test the
-     * repository root.
-     */
     await fetchGitHubDirectory(
       "",
       CONTENT_REPO_NAME,

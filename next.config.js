@@ -1,8 +1,11 @@
 const path = require("path");
 const runtimeCaching = require("./runtime-caching");
+const { clear } = require("console");
 
 const enablePwaInDev = process.env.NEXT_PUBLIC_ENABLE_PWA_DEV === "true";
-const shouldDisablePwa = process.env.NODE_ENV !== "production" && !enablePwaInDev;
+const shouldDisablePwa =
+  process.env.NODE_ENV !== "production" && !enablePwaInDev;
+
 const devWatchIgnored = [
   "**/.git/**",
   "**/.next/**",
@@ -39,17 +42,44 @@ const nextConfig = {
   // Enable gzip / brotli compression for all responses
   compress: true,
 
-  // Image optimisation — allow GitHub raw content + local images
+  // Image optimization
   images: {
     formats: ["image/avif", "image/webp"],
+
+    /*
+     * Images served directly from external repositories.
+     */
     remotePatterns: [
-      { protocol: "https", hostname: "raw.githubusercontent.com" },
-      { protocol: "https", hostname: "github.com" },
+      {
+        protocol: "https",
+        hostname: "raw.githubusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "github.com",
+      },
     ],
-    // Cache optimised images for 1 year
+
+    /*
+     * The universal shell loads company branding through:
+     *
+     *   /api/proxy?url=<company repository asset>
+     *
+     * Next.js Image requires the local proxy URL and its
+     * query parameter to be explicitly allowed.
+     */
+    localPatterns: [
+      {
+        pathname: "/api/proxy",
+      },
+    ],
+
+    // Cache optimized images for 1 year
     minimumCacheTTL: 365 * 24 * 60 * 60,
-    // Limit concurrent optimisation to keep the server responsive
+
+    // Limit concurrent optimization to keep the server responsive
     deviceSizes: [640, 828, 1080, 1200, 1920],
+
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
 
@@ -68,14 +98,18 @@ const nextConfig = {
         ...config.optimization.splitChunks,
         cacheGroups: {
           ...(config.optimization.splitChunks?.cacheGroups || {}),
+
           syntaxHighlighter: {
-            test: /[\\/]node_modules[\\/](react-syntax-highlighter)[\\/]/,
+            test:
+              /[\\/]node_modules[\\/](react-syntax-highlighter)[\\/]/,
             name: "syntax-highlighter",
             chunks: "all",
             priority: 20,
           },
+
           reactIcons: {
-            test: /[\\/]node_modules[\\/](react-icons)[\\/]/,
+            test:
+              /[\\/]node_modules[\\/](react-icons)[\\/]/,
             name: "react-icons",
             chunks: "all",
             priority: 15,
@@ -83,6 +117,7 @@ const nextConfig = {
         },
       };
     }
+
     return config;
   },
 
@@ -93,31 +128,55 @@ const nextConfig = {
         // Public directory assets (icons, manifest, etc.)
         source: "/icons/:path*",
         headers: [
-          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+          {
+            key: "Cache-Control",
+            value:
+              "public, max-age=86400, stale-while-revalidate=604800",
+          },
         ],
       },
+
       {
         source: "/manifest.json",
         headers: [
-          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+          {
+            key: "Cache-Control",
+            value:
+              "public, max-age=86400, stale-while-revalidate=604800",
+          },
         ],
       },
+
       {
         source: "/login",
         headers: [
-          { key: "Cache-Control", value: "no-store, no-cache, must-revalidate, max-age=0" },
+          {
+            key: "Cache-Control",
+            value:
+              "no-store, no-cache, must-revalidate, max-age=0",
+          },
         ],
       },
+
       {
         source: "/signup",
         headers: [
-          { key: "Cache-Control", value: "no-store, no-cache, must-revalidate, max-age=0" },
+          {
+            key: "Cache-Control",
+            value:
+              "no-store, no-cache, must-revalidate, max-age=0",
+          },
         ],
       },
+
       {
         source: "/sw.js",
         headers: [
-          { key: "Cache-Control", value: "no-store, no-cache, must-revalidate, max-age=0" },
+          {
+            key: "Cache-Control",
+            value:
+              "no-store, no-cache, must-revalidate, max-age=0",
+          },
         ],
       },
     ];

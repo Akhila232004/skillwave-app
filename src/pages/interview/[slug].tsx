@@ -5,14 +5,18 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
+
 import {
   FaArrowLeft,
   FaArrowRight,
   FaCheck,
   FaMoon,
+  FaStar,
+  FaRegStar,
   FaSun,
 } from "react-icons/fa";
 
@@ -20,28 +24,46 @@ import RepoMarkdown from "../../components/content/RepoMarkdown";
 import { ThemeContext } from "../../context/ThemeContext";
 import { useProtectedAppSession } from "../../lib/app-session";
 import { fetchInterviewQuestion } from "../../lib/content-client";
+
 import type {
   InterviewCourseQuestion,
   InterviewQuestionDetail,
 } from "../../lib/content-types";
+
 import { goBackOr } from "../../lib/navigation";
 
 export default function InterviewDetailPage() {
   const router = useRouter();
   const { slug } = router.query;
 
-  const { status } = useProtectedAppSession();
+  const { status } =
+    useProtectedAppSession();
+
   const { theme, toggleTheme } =
     useContext(ThemeContext);
 
+  /*
+   * ================================
+   * INTERVIEW DATA
+   * ================================
+   */
+
   const [item, setItem] =
-    useState<InterviewQuestionDetail | null>(null);
+    useState<InterviewQuestionDetail | null>(
+      null
+    );
 
   const [loading, setLoading] =
     useState(true);
 
   const [error, setError] =
     useState("");
+
+  /*
+   * ================================
+   * QUESTION NAVIGATION
+   * ================================
+   */
 
   const [currentQuestion, setCurrentQuestion] =
     useState(0);
@@ -56,17 +78,51 @@ export default function InterviewDetailPage() {
     useRef("");
 
   /*
-   * Reference to the question card.
-   *
-   * The card is scrollable so long answers
-   * stay inside the screen.
+   * Reference to the scrollable
+   * question card.
    */
   const questionCardRef =
     useRef<HTMLElement | null>(null);
 
   /*
-   * Load interview course.
+   * ================================
+   * INDIVIDUAL QUESTION FAVORITES
+   * ================================
+   *
+   * Each question has its own favorite
+   * identity.
+   *
+   * Example:
+   *
+   * interview-question:
+   * java::question-1
+   *
+   * interview-question:
+   * java::question-2
+   *
+   * Therefore two questions in the
+   * same interview course can both
+   * independently be favorites.
    */
+
+  const [
+    favoriteQuestionSlugs,
+    setFavoriteQuestionSlugs,
+  ] = useState<Set<string>>(
+    new Set()
+  );
+
+  const [
+    favoriteLoading,
+    setFavoriteLoading,
+  ] = useState(false);
+
+  /*
+   * ================================
+   * LOAD INTERVIEW COURSE
+   * ================================
+   */
+
   useEffect(() => {
     if (
       status !== "authenticated" ||
@@ -88,10 +144,16 @@ export default function InterviewDetailPage() {
           setLoading(true);
           setCurrentQuestion(0);
           setCompleted(false);
+          setFavoriteQuestionSlugs(
+            new Set()
+          );
         }
 
         setError("");
 
+        /*
+         * Load interview content.
+         */
         const nextItem =
           await fetchInterviewQuestion(
             slug,
@@ -108,6 +170,95 @@ export default function InterviewDetailPage() {
         setItem(nextItem);
         setCurrentQuestion(0);
         setCompleted(false);
+
+        /*
+         * Load the user's saved
+         * individual interview-question
+         * favorites.
+         */
+        try {
+          const favoritesResponse =
+            await fetch(
+              "/api/favorites",
+              {
+                method: "GET",
+                credentials: "include",
+                signal:
+                  controller.signal,
+              }
+            );
+
+          if (
+            favoritesResponse.ok
+          ) {
+            const favorites =
+              await favoritesResponse.json();
+
+            if (
+              Array.isArray(
+                favorites
+              )
+            ) {
+              const questionFavorites =
+                favorites
+                  .filter(
+                    (
+                      favorite: {
+                        kind?: string;
+                        slug?: string;
+                      }
+                    ) =>
+                      favorite.kind ===
+                        "interview-question" &&
+                      typeof favorite.slug ===
+                        "string"
+                  )
+                  .map(
+                    (
+                      favorite: {
+                        slug?: string;
+                      }
+                    ) =>
+                      String(
+                        favorite.slug
+                      )
+                  )
+                  .filter(
+                    (
+                      favoriteSlug: string
+                    ) =>
+                      favoriteSlug.startsWith(
+                        `${slug}::`
+                      )
+                  );
+
+              setFavoriteQuestionSlugs(
+                new Set(
+                  questionFavorites
+                )
+              );
+            }
+          }
+        } catch (favoriteError) {
+          /*
+           * Do not prevent the interview
+           * from loading if favorites
+           * fail.
+           */
+          if (
+            !(
+              favoriteError instanceof
+                DOMException &&
+              favoriteError.name ===
+                "AbortError"
+            )
+          ) {
+            console.warn(
+              "Failed to load interview question favorites:",
+              favoriteError
+            );
+          }
+        }
       } catch (err: unknown) {
         if (
           !cancelled &&
@@ -134,8 +285,11 @@ export default function InterviewDetailPage() {
   }, [slug, status]);
 
   /*
-   * Get all questions.
+   * ================================
+   * QUESTIONS
+   * ================================
    */
+
   const questions: InterviewCourseQuestion[] =
     item?.questions ?? [];
 
@@ -148,12 +302,248 @@ export default function InterviewDetailPage() {
       : null;
 
   /*
-   * Move between questions.
+   * ================================
+   * INDIVIDUAL QUESTION FAVORITE ID
+   * ================================
+   *
+   * The course slug and question slug
+   * are combined so that questions
+   * remain unique.
+   */
+
+  const currentQuestionFavoriteSlug =
+    useMemo(() => {
+      if (
+        typeof slug !== "string" ||
+        !question
+      ) {
+        return "";
+      }
+
+      const questionSlug =
+        String(
+          question.slug || ""
+        ).trim();
+
+      /*
+       * Normally question.slug will
+       * already be unique.
+       *
+       * The index is included as a
+       * fallback so that even a content
+       * item without a slug remains
+       * independently favoritable.
+       */
+      return questionSlug
+        ? `${slug}::${questionSlug}`
+        : `${slug}::question-${currentQuestion + 1}`;
+    }, [
+      slug,
+      question,
+      currentQuestion,
+    ]);
+
+  const isCurrentQuestionFavorite =
+    Boolean(
+      currentQuestionFavoriteSlug &&
+        favoriteQuestionSlugs.has(
+          currentQuestionFavoriteSlug
+        )
+    );
+
+  /*
+   * ================================
+   * TOGGLE QUESTION FAVORITE
+   * ================================
+   */
+
+  const toggleQuestionFavorite =
+    useCallback(async () => {
+      if (
+        !currentQuestionFavoriteSlug ||
+        !question ||
+        typeof slug !== "string" ||
+        favoriteLoading
+      ) {
+        return;
+      }
+
+      setFavoriteLoading(true);
+
+      const currentlyFavorite =
+        favoriteQuestionSlugs.has(
+          currentQuestionFavoriteSlug
+        );
+
+      try {
+        if (
+          currentlyFavorite
+        ) {
+          /*
+           * Remove this individual
+           * question from favorites.
+           */
+          const response =
+            await fetch(
+              `/api/favorites?slug=${encodeURIComponent(
+                currentQuestionFavoriteSlug
+              )}&kind=interview-question`,
+              {
+                method: "DELETE",
+                credentials: "include",
+              }
+            );
+
+          if (!response.ok) {
+            throw new Error(
+              "Failed to remove favorite"
+            );
+          }
+
+          setFavoriteQuestionSlugs(
+            (previous) => {
+              const next =
+                new Set(
+                  previous
+                );
+
+              next.delete(
+                currentQuestionFavoriteSlug
+              );
+
+              return next;
+            }
+          );
+        } else {
+          /*
+           * Save this individual
+           * question as a favorite.
+           */
+          const response =
+            await fetch(
+              "/api/favorites",
+              {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                  "Content-Type":
+                    "application/json",
+                },
+                body: JSON.stringify(
+                  {
+                    /*
+                     * Unique identity:
+                     *
+                     * course-slug::
+                     * question-slug
+                     */
+                    slug:
+                      currentQuestionFavoriteSlug,
+
+                    /*
+                     * Display name shown
+                     * in the favorites area.
+                     */
+                    topic_name:
+                      question.title,
+
+                    /*
+                     * Interview course name.
+                     */
+                    subject:
+                      item?.title ||
+                      "Interview",
+
+                    /*
+                     * IMPORTANT:
+                     *
+                     * This distinguishes
+                     * question favorites
+                     * from course favorites.
+                     */
+                    kind:
+                      "interview-question",
+
+                    summary:
+                      question.excerpt ||
+                      question.question ||
+                      "",
+
+                    href: {
+                      pathname:
+                        `/interview/${slug}`,
+                      query: {
+                        question:
+                          String(
+                            currentQuestion
+                          ),
+                      },
+                    },
+
+                    md_url:
+                      question.markdown_url ||
+                      item?.markdown_url,
+
+                    subject_readme_url:
+                      item?.markdown_url,
+
+                    savedAt:
+                      Date.now(),
+                  }
+                ),
+              }
+            );
+
+          if (!response.ok) {
+            throw new Error(
+              "Failed to add favorite"
+            );
+          }
+
+          setFavoriteQuestionSlugs(
+            (previous) => {
+              const next =
+                new Set(
+                  previous
+                );
+
+              next.add(
+                currentQuestionFavoriteSlug
+              );
+
+              return next;
+            }
+          );
+        }
+      } catch (favoriteError) {
+        console.error(
+          "Failed to update interview question favorite:",
+          favoriteError
+        );
+      } finally {
+        setFavoriteLoading(false);
+      }
+    }, [
+      currentQuestionFavoriteSlug,
+      question,
+      slug,
+      favoriteLoading,
+      favoriteQuestionSlugs,
+      item,
+      currentQuestion,
+    ]);
+
+  /*
+   * ================================
+   * CHANGE QUESTION
+   * ================================
    *
    * direction:
+   *
    *   1  = next
    *  -1  = previous
    */
+
   const changeQuestion =
     useCallback(
       (direction: number) => {
@@ -165,11 +555,13 @@ export default function InterviewDetailPage() {
         }
 
         const nextIndex =
-          currentQuestion + direction;
+          currentQuestion +
+          direction;
 
         /*
-         * If the user is on the last question
-         * and clicks Next, finish the interview.
+         * If the user is on the last
+         * question and clicks Next,
+         * finish the interview.
          */
         if (
           direction > 0 &&
@@ -183,27 +575,36 @@ export default function InterviewDetailPage() {
         /*
          * Don't move before question 1.
          */
-        if (nextIndex < 0) {
-          return;
-        }
-
-        /*
-         * Don't move beyond the final question.
-         */
         if (
-          nextIndex >= totalQuestions
+          nextIndex < 0
         ) {
           return;
         }
 
-        setIsTransitioning(true);
+        /*
+         * Don't move beyond the
+         * final question.
+         */
+        if (
+          nextIndex >=
+          totalQuestions
+        ) {
+          return;
+        }
+
+        setIsTransitioning(
+          true
+        );
 
         /*
-         * Reset the scroll position of the
-         * question card before changing question.
+         * Reset scroll position before
+         * changing the question.
          */
-        if (questionCardRef.current) {
-          questionCardRef.current.scrollTop = 0;
+        if (
+          questionCardRef.current
+        ) {
+          questionCardRef.current.scrollTop =
+            0;
         }
 
         window.setTimeout(() => {
@@ -212,10 +613,12 @@ export default function InterviewDetailPage() {
           );
 
           /*
-           * Small delay for the transition.
+           * Small transition delay.
            */
           window.setTimeout(() => {
-            setIsTransitioning(false);
+            setIsTransitioning(
+              false
+            );
           }, 80);
         }, 120);
       },
@@ -227,18 +630,15 @@ export default function InterviewDetailPage() {
     );
 
   /*
-   * Keyboard navigation.
+   * ================================
+   * KEYBOARD NAVIGATION
+   * ================================
    *
    * Enter       -> Next
    * Arrow Down  -> Next
    * Arrow Up    -> Previous
-   *
-   * IMPORTANT:
-   *
-   * Mouse scrolling is NOT handled here.
-   * Therefore scrolling through a long answer
-   * will never change the question.
    */
+
   useEffect(() => {
     const handleKeyDown = (
       event: KeyboardEvent
@@ -251,14 +651,19 @@ export default function InterviewDetailPage() {
       }
 
       const target =
-        event.target as HTMLElement | null;
+        event.target as
+          | HTMLElement
+          | null;
 
       /*
-       * Don't interfere with form fields.
+       * Don't interfere with
+       * form fields.
        */
       if (
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
+        target?.tagName ===
+          "INPUT" ||
+        target?.tagName ===
+          "TEXTAREA" ||
         target?.isContentEditable
       ) {
         return;
@@ -267,7 +672,10 @@ export default function InterviewDetailPage() {
       /*
        * Enter -> Next question.
        */
-      if (event.key === "Enter") {
+      if (
+        event.key ===
+        "Enter"
+      ) {
         event.preventDefault();
 
         changeQuestion(1);
@@ -279,7 +687,8 @@ export default function InterviewDetailPage() {
        * Arrow Down -> Next question.
        */
       if (
-        event.key === "ArrowDown"
+        event.key ===
+        "ArrowDown"
       ) {
         event.preventDefault();
 
@@ -292,7 +701,8 @@ export default function InterviewDetailPage() {
        * Arrow Up -> Previous question.
        */
       if (
-        event.key === "ArrowUp"
+        event.key ===
+        "ArrowUp"
       ) {
         event.preventDefault();
 
@@ -320,13 +730,11 @@ export default function InterviewDetailPage() {
   ]);
 
   /*
-   * Completion percentage.
-   *
-   * Example:
-   * Question 1 / 10 = 10%
-   * Question 5 / 10 = 50%
-   * Question 10 / 10 = 100%
+   * ================================
+   * PROGRESS
+   * ================================
    */
+
   const progress =
     totalQuestions > 0
       ? ((currentQuestion + 1) /
@@ -335,8 +743,11 @@ export default function InterviewDetailPage() {
       : 0;
 
   /*
-   * Completion screen.
+   * ================================
+   * COMPLETION SCREEN
+   * ================================
    */
+
   if (
     !loading &&
     !error &&
@@ -393,17 +804,21 @@ export default function InterviewDetailPage() {
 
                 <button
                   className="btn btn-outline"
-                  onClick={toggleTheme}
+                  onClick={
+                    toggleTheme
+                  }
                   type="button"
                 >
-                  {theme === "dark" ? (
+                  {theme ===
+                  "dark" ? (
                     <FaSun />
                   ) : (
                     <FaMoon />
                   )}
 
                   <span className="hide-mobile">
-                    {theme === "dark"
+                    {theme ===
+                    "dark"
                       ? "Light"
                       : "Dark"}
                   </span>
@@ -420,7 +835,8 @@ export default function InterviewDetailPage() {
               minHeight: "60vh",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
+              justifyContent:
+                "center",
             }}
           >
             <div
@@ -440,14 +856,17 @@ export default function InterviewDetailPage() {
                   height: 64,
                   margin:
                     "0 auto 20px",
-                  borderRadius: "50%",
+                  borderRadius:
+                    "50%",
                   display: "flex",
-                  alignItems: "center",
+                  alignItems:
+                    "center",
                   justifyContent:
                     "center",
                   background:
                     "#22c55e",
-                  color: "#ffffff",
+                  color:
+                    "#ffffff",
                   fontSize: 24,
                 }}
               >
@@ -497,11 +916,13 @@ export default function InterviewDetailPage() {
 
               <div
                 style={{
-                  display: "flex",
+                  display:
+                    "flex",
                   justifyContent:
                     "center",
                   gap: 12,
-                  flexWrap: "wrap",
+                  flexWrap:
+                    "wrap",
                   marginTop: 26,
                 }}
               >
@@ -510,15 +931,21 @@ export default function InterviewDetailPage() {
                   className="btn btn-outline"
                   type="button"
                   onClick={() => {
-                    setCurrentQuestion(0);
-                    setCompleted(false);
+                    setCurrentQuestion(
+                      0
+                    );
+
+                    setCompleted(
+                      false
+                    );
 
                     window.setTimeout(
                       () => {
                         if (
                           questionCardRef.current
                         ) {
-                          questionCardRef.current.scrollTop = 0;
+                          questionCardRef.current.scrollTop =
+                            0;
                         }
                       },
                       0
@@ -549,6 +976,12 @@ export default function InterviewDetailPage() {
       </div>
     );
   }
+
+  /*
+   * ================================
+   * MAIN PAGE
+   * ================================
+   */
 
   return (
     <div className="app-shell">
@@ -606,17 +1039,21 @@ export default function InterviewDetailPage() {
 
               <button
                 className="btn btn-outline"
-                onClick={toggleTheme}
+                onClick={
+                  toggleTheme
+                }
                 type="button"
               >
-                {theme === "dark" ? (
+                {theme ===
+                "dark" ? (
                   <FaSun />
                 ) : (
                   <FaMoon />
                 )}
 
                 <span className="hide-mobile">
-                  {theme === "dark"
+                  {theme ===
+                  "dark"
                     ? "Light"
                     : "Dark"}
                 </span>
@@ -646,20 +1083,21 @@ export default function InterviewDetailPage() {
         {/* =========================
             ERROR
         ========================== */}
-        {!loading && error && (
-          <div
-            className="card"
-            style={{
-              padding: 22,
-              borderRadius: 22,
-              marginTop: 20,
-              color:
-                "var(--status-offline-color)",
-            }}
-          >
-            {error}
-          </div>
-        )}
+        {!loading &&
+          error && (
+            <div
+              className="card"
+              style={{
+                padding: 22,
+                borderRadius: 22,
+                marginTop: 20,
+                color:
+                  "var(--status-offline-color)",
+              }}
+            >
+              {error}
+            </div>
+          )}
 
         {/* =========================
             INTERVIEW QUESTION
@@ -667,7 +1105,8 @@ export default function InterviewDetailPage() {
         {!loading &&
           !error &&
           item &&
-          totalQuestions > 0 &&
+          totalQuestions >
+            0 &&
           question && (
             <section
               style={{
@@ -715,8 +1154,10 @@ export default function InterviewDetailPage() {
               ====================== */}
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
+                  display:
+                    "flex",
+                  alignItems:
+                    "center",
                   justifyContent:
                     "space-between",
                   gap: 12,
@@ -733,7 +1174,8 @@ export default function InterviewDetailPage() {
                   }}
                 >
                   Question{" "}
-                  {currentQuestion + 1}{" "}
+                  {currentQuestion +
+                    1}{" "}
                   of{" "}
                   {totalQuestions}
                 </div>
@@ -764,8 +1206,10 @@ export default function InterviewDetailPage() {
                 style={{
                   width: "100%",
                   height: 9,
-                  borderRadius: 999,
-                  overflow: "hidden",
+                  borderRadius:
+                    999,
+                  overflow:
+                    "hidden",
                   background:
                     "var(--border)",
                   marginBottom: 18,
@@ -778,11 +1222,9 @@ export default function InterviewDetailPage() {
                   style={{
                     width: `${progress}%`,
                     height: "100%",
-                    borderRadius: 999,
+                    borderRadius:
+                      999,
 
-                    /*
-                     * Green = completed progress.
-                     */
                     background:
                       "linear-gradient(90deg, #22c55e, #16a34a)",
 
@@ -802,21 +1244,14 @@ export default function InterviewDetailPage() {
                   QUESTION CARD
               ====================== */}
               <article
-                ref={questionCardRef}
+                ref={
+                  questionCardRef
+                }
                 className="card reader-card"
                 style={{
                   padding: 28,
                   borderRadius: 26,
 
-                  /*
-                   * The card has its own
-                   * scrollbar.
-                   *
-                   * IMPORTANT:
-                   *
-                   * Scrolling this card NEVER
-                   * changes the question.
-                   */
                   height:
                     "calc(100vh - 250px)",
 
@@ -825,12 +1260,9 @@ export default function InterviewDetailPage() {
                   maxHeight:
                     "calc(100vh - 250px)",
 
-                  overflowY: "auto",
+                  overflowY:
+                    "auto",
 
-                  /*
-                   * Prevent scroll chaining
-                   * into the page.
-                   */
                   overscrollBehaviorY:
                     "contain",
 
@@ -857,7 +1289,8 @@ export default function InterviewDetailPage() {
                 ================== */}
                 <div
                   style={{
-                    display: "flex",
+                    display:
+                      "flex",
                     alignItems:
                       "center",
                     justifyContent:
@@ -883,7 +1316,9 @@ export default function InterviewDetailPage() {
 
                     {question.level ? (
                       <span className="badge">
-                        {question.level}
+                        {
+                          question.level
+                        }
                       </span>
                     ) : null}
 
@@ -902,6 +1337,68 @@ export default function InterviewDetailPage() {
                     )}
 
                   </div>
+
+                  {/* =================
+                      INDIVIDUAL QUESTION
+                      FAVORITE BUTTON
+                  ================= */}
+                  <button
+                    type="button"
+                    onClick={
+                      toggleQuestionFavorite
+                    }
+                    disabled={
+                      favoriteLoading
+                    }
+                    aria-label={
+                      isCurrentQuestionFavorite
+                        ? "Remove question from favorites"
+                        : "Add question to favorites"
+                    }
+                    title={
+                      isCurrentQuestionFavorite
+                        ? "Remove from favorites"
+                        : "Add to favorites"
+                    }
+                    style={{
+                      width: 42,
+                      height: 42,
+                      flexShrink: 0,
+                      borderRadius:
+                        "50%",
+                      border:
+                        "1px solid var(--border)",
+                      background:
+                        "var(--surface)",
+                      color:
+                        isCurrentQuestionFavorite
+                          ? "#f59e0b"
+                          : "var(--muted)",
+                      display:
+                        "flex",
+                      alignItems:
+                        "center",
+                      justifyContent:
+                        "center",
+                      cursor:
+                        favoriteLoading
+                          ? "wait"
+                          : "pointer",
+                      fontSize: 18,
+                      transition:
+                        "all 150ms ease",
+                      opacity:
+                        favoriteLoading
+                          ? 0.6
+                          : 1,
+                    }}
+                  >
+                    {isCurrentQuestionFavorite ? (
+                      <FaStar />
+                    ) : (
+                      <FaRegStar />
+                    )}
+                  </button>
 
                 </div>
 
@@ -934,7 +1431,9 @@ export default function InterviewDetailPage() {
                         "var(--text)",
                     }}
                   >
-                    {question.question}
+                    {
+                      question.question
+                    }
                   </div>
                 ) : null}
 
@@ -974,7 +1473,9 @@ export default function InterviewDetailPage() {
                         item.markdown_url
                       }
                     >
-                      {question.markdown}
+                      {
+                        question.markdown
+                      }
                     </RepoMarkdown>
 
                   </div>
@@ -991,7 +1492,8 @@ export default function InterviewDetailPage() {
                     borderTop:
                       "1px solid var(--border)",
 
-                    display: "flex",
+                    display:
+                      "flex",
                     alignItems:
                       "center",
                     justifyContent:
@@ -1012,7 +1514,9 @@ export default function InterviewDetailPage() {
                       isTransitioning
                     }
                     onClick={() =>
-                      changeQuestion(-1)
+                      changeQuestion(
+                        -1
+                      )
                     }
                   >
                     <FaArrowLeft />
@@ -1065,17 +1569,21 @@ export default function InterviewDetailPage() {
                       isTransitioning
                     }
                     onClick={() =>
-                      changeQuestion(1)
+                      changeQuestion(
+                        1
+                      )
                     }
                   >
 
                     {currentQuestion ===
-                    totalQuestions - 1
+                    totalQuestions -
+                      1
                       ? "Finish"
                       : "Next"}
 
                     {currentQuestion ===
-                    totalQuestions - 1 ? (
+                    totalQuestions -
+                      1 ? (
                       <FaCheck />
                     ) : (
                       <FaArrowRight />
@@ -1093,16 +1601,18 @@ export default function InterviewDetailPage() {
               <div
                 style={{
                   marginTop: 10,
-                  textAlign: "center",
+                  textAlign:
+                    "center",
                   fontSize: 11,
                   color:
                     "var(--muted)",
                 }}
               >
-                Scroll inside the card
-                to read the complete
-                answer. Scrolling will
-                not change the question.
+                Scroll inside the
+                card to read the
+                complete answer.
+                Scrolling will not
+                change the question.
               </div>
 
             </section>
@@ -1114,7 +1624,8 @@ export default function InterviewDetailPage() {
         {!loading &&
           !error &&
           item &&
-          totalQuestions === 0 && (
+          totalQuestions ===
+            0 && (
             <section
               style={{
                 marginTop: 20,

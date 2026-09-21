@@ -7,7 +7,7 @@
     "dev": "node scripts/dev-https.js",
     "build": "next build --webpack",
     "prestart": "node scripts/kill-listening-ports.cjs 3001",
-    "start": "next start -p 3001",
+    "start": "next start --port $PORT",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "typecheck": "tsc --noEmit"
   },

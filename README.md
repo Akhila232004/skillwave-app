@@ -1,118 +1,219 @@
-# Tinitiate Education Content Repository
+# SkillWave
 
-This repository is the content source for the Tinitiate education web app.
+> Your complete learning workspace for tech careers.
 
-Recommended future repository name:
+SkillWave is a learning platform for students and technology professionals. It brings technical courses, interview preparation, training videos, slideshows, and audio learning resources together in one application.
 
-- `tiai-edu-app`
+## Features
 
-Until the GitHub rename happens, the app can continue to fetch from the current repository name and switch over later through one central config value.
+- Technical learning courses
+- Interview questions and answers
+- Training videos
+- Slide-based learning resources
+- Audio learning resources
+- Dynamic content loaded from a dedicated GitHub repository
+- Google authentication
+- Dashboard-based learning experience
+- Centralized branding and UI configuration
 
-## Purpose
+## Technology Stack
 
-This repository organizes every major learning module in one place:
+- **Frontend:** React, Next.js, TypeScript
+- **Application:** Next.js Pages Router and **API** routes
+- **Authentication:** NextAuth with Google OAuth
+- **Content:** Markdown and **YAML**
+- **Content Repository:** GitHub
+- **Runtime:** Node.js
+- **Deployment:** Railway
 
-- `interview-qna`
-- `courses`
-- `cbt`
-- `news-ticker`
+## Prerequisites
 
-The website should fetch data from this repository so content updates can be managed through GitHub instead of hardcoding data inside the app.
+- Node.js 20.x or 22.x
+- npm
+- Git
 
-## Folder Guide
+Verify:
 
-### `interview-qna`
+``` node --version npm --version git --version ```
 
-Stores interview questions and answers in markdown.
+## Download and Installation
 
-- `catalog.yaml` is the app manifest
-- `questions/*.md` are the detailed answer files
+Clone the application:
 
-### `courses`
+```git clone repo link ```
+```cd skillwave ```
 
-Stores the course catalog and subject entry READMEs.
+Install dependencies:
 
-- `catalog.yaml` is the subject manifest
-- `courses/<subject>/README.md` defines topic order for that subject
+```npm install ```
 
-The subject READMEs in this repository are imported from the existing course repositories so the app can use one content index while still reusing the current course material.
+For a clean installation from the lock file:
 
-### `cbt`
+```npm ci ```
 
-Stores all CBT content in one folder:
+## Environment Configuration
 
-- `cbt/slideshows`
-- `cbt/training-videos`
-- `cbt/audio-books`
+Create `.env.local` in the project root:
 
-### `cbt/slideshows`
+```env CONTENT_REPO_OWNER=Owner GITID  CONTENT_REPO_NAME=content rpo_name , CONTENT_REPO_BRANCH=main
 
-Stores markdown slideshow decks for CBT.
+GOOGLE_CLIENT_ID=your_google_client_id GOOGLE_CLIENT_SECRET=your_google_client_secret
 
-- `av-metadata.yaml` is the deck manifest
-- each deck contains a `slideshow-content.md`
-- slide separator: `---`
+NEXTAUTH_SECRET=your_nextauth_secret NEXTAUTH_URL=[http://localhost:**3001**](http://localhost:**3001**) ```
 
-### `cbt/training-videos`
+| Variable               | Purpose                                |
+| ---------------------- | -------------------------------------- |
+| `CONTENT_REPO_OWNER`   | GitHub owner of the content repository |
+| `CONTENT_REPO_NAME`    | Content repository name                |
+| `CONTENT_REPO_BRANCH`  | Content branch                         |
+| `GOOGLE_CLIENT_ID`     | Google OAuth client ID                 |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret             |
+| `NEXTAUTH_SECRET`      | NextAuth secret                        |
+| `NEXTAUTH_URL`         | Application base URL                   |
 
-Stores training-video metadata for content that can be embedded or streamed directly by the app.
+> Never commit `.env.local` or expose secret values in source control.
 
-- `av-metadata.yaml` is the media manifest
-- `collections/*.md` provides optional notes for the UI
+## Google OAuth Setup
 
-### `cbt/audio-books`
+For local development, configure the Google OAuth application with:
 
-Stores audio-learning metadata and optional notes.
+**Authorized JavaScript origin**
 
-- `av-metadata.yaml` is the media manifest
-- `collections/*.md` provides optional notes for the UI
+## Run Locally
 
-### `news-ticker`
+Standard development command:
 
-Stores top-strip content for:
+``` npm run dev ```
 
-- jobs
-- trending technologies
-- TinitiateAI events
+## Production Build
 
-## Content Update Rules
+Create a production build:
 
-### Interview QnA
+```npm run build ```
 
-1. Add a new markdown file in `interview-qna/questions/`
-2. Add a matching entry in `interview-qna/catalog.yaml`
+Start the production server:
 
-### Courses
+```npm start ```
 
-1. Add or update the subject entry in `courses/catalog.yaml`
-2. Keep subject topic order inside the subject `README.md`
-3. Topic markdown links inside that README should point to valid markdown files
 
-### Slideshows
+## Common Commands
 
-1. Add a new deck entry in `cbt/slideshows/av-metadata.yaml`
-2. Add the deck markdown file
-3. Keep slide order in markdown using `---`
+```# Install dependencies npm install
 
-### Videos and Audio
+# Clean installation
 
-1. Add metadata in the correct `cbt/*/av-metadata.yaml`
-2. Add optional notes markdown if needed
-3. For repo-hosted offline playback, use `mediaPath` for files such as `.mp4`, `.webm`, `.mp3`, or `.m4a`
-4. Optional fields:
-   `posterPath` for thumbnails, `mimeType` for explicit media type, `embedUrl` for demo embeds, and `playlistUrl` for external source links
+npm ci
 
-### News Ticker
+# Start development server
 
-1. Add a new item in `news-ticker/feed.yaml`
-2. Set `kind`, `label`, `title`, `href`, and `priority`
+npm run dev
 
-## App Fetching Model
+# Start Next.js directly on port 3001
 
-The website should:
+npx next dev -p **3001**
 
-1. fetch manifest files from this repository
-2. resolve markdown or metadata paths from those manifests
-3. render content without hardcoding the data inside the app
+# Create production build
 
-This keeps GitHub as the content CMS and keeps the frontend focused on presentation.
+npm run build
+
+# Start production server
+
+npm start
+
+# Check Git status
+
+git status
+
+# View configured remotes
+
+git remote -v ```
+
+Deployment flow:
+
+```text
+### Application Repository
+    |
+    v
+    Railway
+    |
+    v
+SkillWave Application
+    |
+    v
+### Content Repository
+```
+
+## Git Workflow
+
+Check changes:
+
+```powershell git status git diff ```
+
+Stage changes:
+
+```powershell git add . ```
+
+Commit:
+
+```powershell git commit -m *Describe the change* ```
+
+Push:
+
+```powershell git push origin main ```
+
+## Updating Content
+
+Learning content is maintained separately from the application.
+
+Typical areas:
+
+```text courses/ interview/ cbt/ dashboard/ branding/ design/ ```
+
+After content changes:
+
+## Update the required Markdown or YAML files.
+
+## Validate the content. ## Commit the changes. ## Push to the configured branch. ## Verify the updated content in SkillWave.
+
+### Content is not loading
+
+Verify:
+
+```env CONTENT_REPO_OWNER, CONTENT_REPO_NAME, CONTENT_REPO_BRANCH=main ```
+
+Also verify that the configured repository and branch contain the expected content.
+
+### Build errors
+
+Run:
+
+```powershell npm install npm run build ```
+
+Resolve the first reported build error before addressing secondary errors.
+
+## Security
+
+- Never commit **API** keys, OAuth secrets, passwords, or other credentials.
+- Keep `.env.local` out of source control.
+- Store production secrets in Railway environment variables.
+- Use **HTTPS** in production.
+- Keep Google OAuth redirect URIs restricted to required application domains.
+
+## Production Checklist
+
+- [ ] Dependencies install successfully.
+- [ ] `npm run build` completes successfully.
+- [ ] Required environment variables are configured.
+- [ ] Google OAuth credentials are configured.
+- [ ] `NEXTAUTH_URL` matches the deployment **URL**.
+- [ ] Google OAuth redirect **URI** matches the deployment **URL**.
+- [ ] Content repository configuration is correct.
+- [ ] Required content is available.
+- [ ] Authentication works.
+- [ ] Courses and learning resources load correctly.
+
+## License
+
+The project license should be defined by the repository maintainers.
+
+---
